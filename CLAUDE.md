@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v0.11.2 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v1.0.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
@@ -553,6 +553,7 @@ Progress and per-version details are in `CHANGELOG.md`.
 | 8 Packaging and releases | PyInstaller build, GitHub Release created automatically from a pushed tag, update check | v0.9.0–v0.10.0 |
 | 9 Taskbar embedding | Not done (ADR 0005) | — |
 | 10 App icon and licenses | AppUserModelID + `assets/app.ico`, `THIRD_PARTY_LICENSES.txt`, disclaimer | v0.11.0 |
+| 11 Public release | English docs, the repo made public with a clean history | v1.0.0 |
 
 ### Possible future work
 

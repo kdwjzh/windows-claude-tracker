@@ -2,6 +2,16 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [SemVer](https://semver.org/).
 
+## [1.0.0] - 2026-11-01
+
+First public release. The app works the same as 0.11.2; this version marks the move to a public repository.
+
+### Changed
+
+- The repository is now public on GitHub, starting from a clean history; earlier development happened in a private repository, and its changes are summarized in the entries below
+- From now on, every release uses a v1.x.y (or later) version
+- README.md and README.zh-TW.md: added widget screenshots (`docs/images/`), and the first paragraph now says the app supports the Claude Desktop app
+
 ## [0.11.2] - 2026-10-31
 
 ### Changed (documentation only; app behavior unchanged)
