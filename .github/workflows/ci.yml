@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"] # 標籤由 release.yml 處理（它也會跑 check.ps1），這裡不重複跑
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # 純邏輯：core／providers／services／viewmodel。跑在 ubuntu：啟動快、跑得比較快
+  logic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff format --check .
+      - run: ruff check .
+      - run: pyright
+      - run: lint-imports
+      - run: >-
+          pytest -p no:pytest-qt -m "not windows and not qt and not live"
+          --cov=usage_monitor --cov-fail-under=90
+
+  # 只有需要真 Windows 或 Qt 視窗的測試
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - name: pytest (windows / qt)
+        # 還沒有任何 windows／qt 測試時，pytest 回傳 5（沒收集到），視為通過
+        shell: bash
+        run: |
+          pytest -m "(windows or qt) and not live" || [ $? -eq 5 ]

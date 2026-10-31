@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 工具快取
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# 打包產物（*.spec 要保留）
+build/
+dist/
+
+# 本機進度筆記（給自己與新 session 看，不推上 GitHub）
+PROGRESS.md
+
+# 執行時產生、可能含個人資料
+settings.json
+*.log
+
+# 本機編輯器／Claude Code 設定
+.vscode/
+.idea/
+.claude/

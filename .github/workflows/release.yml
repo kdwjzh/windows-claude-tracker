@@ -1,0 +1,74 @@
+# 發佈（CLAUDE.md §3.9）：push vX.Y.Z 標籤 → 檢查、打包 → 建立 GitHub Release
+#   附件：ClaudeUsageTracker-vX.Y.Z.exe、diagnose-vX.Y.Z.exe、THIRD_PARTY_LICENSES.txt、SHA256SUMS.txt
+#   說明：CHANGELOG.md 對應版本的段落；標籤含 "-"（例如 v1.2.0-beta.1）標為 pre-release
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      TAG: ${{ github.ref_name }}
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 安裝
+        run: python -m pip install -e ".[dev]"
+
+      - name: 核對標籤與 __version__
+        run: python scripts/release_notes.py verify-tag $env:TAG
+
+      - name: 取出 CHANGELOG 版本說明
+        run: python scripts/release_notes.py notes $env:TAG release-notes.md
+
+      - name: 檢查（check.ps1）
+        run: ./scripts/check.ps1
+
+      - name: 打包（build.ps1）
+        run: ./scripts/build.ps1 -SkipCheck
+
+      - name: 命名附件並產生 SHA256SUMS.txt
+        run: |
+          New-Item -ItemType Directory -Force release | Out-Null
+          Copy-Item dist/ClaudeUsageTracker.exe "release/ClaudeUsageTracker-$env:TAG.exe"
+          Copy-Item dist/diagnose.exe "release/diagnose-$env:TAG.exe"
+          Copy-Item dist/THIRD_PARTY_LICENSES.txt release/THIRD_PARTY_LICENSES.txt
+          $lines = Get-ChildItem release -Filter *.exe | Sort-Object Name | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          }
+          [IO.File]::WriteAllText("$PWD/release/SHA256SUMS.txt", ($lines -join "`n") + "`n")
+          Get-Content release/SHA256SUMS.txt
+
+      - name: 建立 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $pre = python scripts/release_notes.py is-prerelease $env:TAG
+          $flags = @()
+          if ($pre -eq 'true') { $flags += '--prerelease' }
+          gh release create $env:TAG `
+            "release/ClaudeUsageTracker-$env:TAG.exe" `
+            "release/diagnose-$env:TAG.exe" `
+            release/THIRD_PARTY_LICENSES.txt `
+            release/SHA256SUMS.txt `
+            --title $env:TAG --notes-file release-notes.md --verify-tag @flags

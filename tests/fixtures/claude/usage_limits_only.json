@@ -1,0 +1,9 @@
+{
+  "five_hour": null,
+  "seven_day": null,
+  "limits": [
+    {"kind": "weekly_scoped", "scope": "opus", "percent": 77, "resets_at": "2026-11-02T13:00:00Z"},
+    {"kind": "session", "scope": null, "percent": 64, "resets_at": "2026-10-29T12:15:00Z"},
+    {"kind": "weekly_all", "scope": null, "utilization": 12.5, "resets_at": "2026-11-02T13:00:00Z"}
+  ]
+}
