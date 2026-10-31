@@ -2,7 +2,7 @@
 
 **English** | [繁體中文](README.zh-TW.md)
 
-A small always-on-top widget that sits just above the Windows taskbar and shows your **Claude** (Pro/Max subscription) and **Codex** (ChatGPT account) usage percentages and reset countdowns.
+A small always-on-top widget that sits just above the Windows taskbar and shows your **Claude** (Pro/Max subscription) and **Codex** (ChatGPT account) usage percentages and reset countdowns. It supports the Claude Desktop app.
 
 > This is an unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners.
 
@@ -11,6 +11,8 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
 ┃ 5h  ■■■■□□□□□□  42% · 2h 13m    │ 5h  □□□□□□□□□□  0%
 ┃ 7d  ■■□□□□□□□□  18% · 4d 3h     │ 30d ■■■□□□□□□□  32% · 29d
 ```
+
+<img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="550">
 
 - Green below 70%, yellow 70–89%, red 90% and above; hover over the widget to see the exact reset time
 - Tray icon (check it when the widget is hidden), auto-hide in full screen, `Ctrl+Alt+U` to show/hide

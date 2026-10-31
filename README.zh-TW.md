@@ -2,7 +2,7 @@
 
 [English](README.md) | **繁體中文**
 
-Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱）與 **Codex**（ChatGPT 帳號）的用量百分比與重置倒數。
+Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱）與 **Codex**（ChatGPT 帳號）的用量百分比與重置倒數，也支援 Claude 桌面版。
 
 > 本專案為非官方工具，與 Anthropic、OpenAI 無關；Claude、ChatGPT、Codex 為其各自擁有者的商標。
 
@@ -11,6 +11,8 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 ┃ 5h  ■■■■□□□□□□  42% · 2時13分   │ 5h  □□□□□□□□□□  0%
 ┃ 7d  ■■□□□□□□□□  18% · 4天3時    │ 30d ■■■□□□□□□□  32% · 29天
 ```
+
+<img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="550">
 
 - 綠色 < 70%、黃色 70–89%、紅色 ≥ 90%；滑鼠停在小工具上會顯示確切的重置時刻
 - 系統匣圖示（小工具隱藏時看這裡）、全螢幕時自動隱藏、`Ctrl+Alt+U` 顯示／隱藏
