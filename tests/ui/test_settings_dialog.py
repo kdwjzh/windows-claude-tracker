@@ -15,6 +15,7 @@ import pytest
 pytest.importorskip("pytestqt")
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel
 
 from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
@@ -289,3 +290,43 @@ def test_dialog_font_is_bold_and_follows_language(setup) -> None:
     sheet = dialog_of(controller).styleSheet()
     assert 'font-family: "Microsoft JhengHei UI", "Segoe UI"' in sheet
     assert "font-weight: 700" in sheet
+
+
+def _providers_submenu(menu):
+    return next(
+        a.menu()
+        for a in menu.actions()
+        if a.menu() and a.text() in ("AI 監控對象", "AI services to monitor")
+    )
+
+
+def test_providers_section_renamed(setup) -> None:
+    controller, store, _ = setup
+    labels = [w.text() for w in dialog_of(controller).findChildren(QLabel)]
+    assert "AI 監控對象" in labels
+    store.update(lambda s: replace(s, language="en"))
+    labels = [w.text() for w in dialog_of(controller).findChildren(QLabel)]
+    assert "AI services to monitor" in labels
+
+
+def test_menus_toggle_monitored_ai(setup) -> None:
+    """右鍵選單（小工具與系統匣）的「AI 監控對象」子選單可以開關服務，與設定視窗同步。"""
+    controller, store, _ = setup
+    tray_menu = controller.tray._menu  # pyright: ignore[reportPrivateUsage]
+    for menu in (controller.widget_menu, tray_menu):
+        sub = _providers_submenu(menu)
+        menu.aboutToShow.emit()
+        assert [(a.text(), a.isChecked()) for a in sub.actions()] == [
+            ("Claude", True),
+            ("Codex", False),
+        ]
+
+    _providers_submenu(controller.widget_menu).actions()[1].trigger()  # 勾選 Codex
+    assert store.current.providers == ("claude", "codex")
+    assert [c.provider_id for c in controller.widget.vm.columns] == ["claude", "codex"]
+    assert dialog_of(controller).service_cards["codex"][1].switch.isChecked()
+
+    _providers_submenu(tray_menu).actions()[0].trigger()  # 取消 Claude
+    assert store.current.providers == ("codex",)
+    tray_menu.aboutToShow.emit()
+    assert [a.isChecked() for a in _providers_submenu(tray_menu).actions()] == [False, True]

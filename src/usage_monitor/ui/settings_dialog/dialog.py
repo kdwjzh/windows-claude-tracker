@@ -72,6 +72,7 @@ class SettingsHost(Protocol):
 
     def update_settings(self, change: Callable[[Settings], Settings]) -> None: ...
     def set_autostart(self, enabled: bool) -> None: ...
+    def set_provider_enabled(self, provider_id: str, enabled: bool) -> None: ...
     def provider_state(self, provider_id: str) -> ProviderState | None: ...
     def now(self) -> datetime: ...
     def dialog_palette(self) -> DialogPalette: ...
@@ -342,16 +343,7 @@ class SettingsDialog(QWidget):
             self._update(language=value)
 
     def _set_service(self, provider_id: str, enabled: bool) -> None:
-        def change(s: Settings) -> Settings:
-            wanted = (
-                set(s.providers) | {provider_id} if enabled else set(s.providers) - {provider_id}
-            )
-            catalog = [pid for pid, _ in self._host.catalog]
-            ordered = [pid for pid in catalog if pid in wanted]
-            ordered += [pid for pid in s.providers if pid in wanted and pid not in catalog]
-            return replace(s, providers=tuple(ordered))
-
-        self._host.update_settings(change)
+        self._host.set_provider_enabled(provider_id, enabled)
 
     # ---------------------------------------------------------------- 同步畫面
 

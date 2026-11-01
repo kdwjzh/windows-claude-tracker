@@ -237,6 +237,22 @@ class Controller(QObject):
         if self._dialog is not None:
             self._dialog.refresh()
 
+    def provider_enabled(self, provider_id: str) -> bool:
+        return provider_id in self._settings.providers
+
+    def set_provider_enabled(self, provider_id: str, enabled: bool) -> None:
+        """開關一個 AI 監控對象（右鍵選單與設定視窗共用）；順序依 catalog，未知的服務保留在後面。"""
+
+        def change(s: Settings) -> Settings:
+            current = set(s.providers)
+            wanted = current | {provider_id} if enabled else current - {provider_id}
+            known = [pid for pid, _ in self._catalog]
+            ordered = [pid for pid in known if pid in wanted]
+            ordered += [pid for pid in s.providers if pid in wanted and pid not in known]
+            return replace(s, providers=tuple(ordered))
+
+        self.update_settings(change)
+
     def open_settings(self) -> None:
         if self._dialog is None:
             self._dialog = SettingsDialog(self)

@@ -8,6 +8,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - The context menu item that opens the Settings window (in both the widget menu and the tray menu) is now called 「開啟儀表板」 / "Open dashboard" instead of 「設定…」 / "Settings…"
 - Settings window font: all text is bold; Traditional Chinese now uses Microsoft JhengHei (微軟正黑體), and English keeps the same font as before
+- The Settings section "Services" is now called 「AI 監控對象」 / "AI services to monitor"
+
+### Added
+
+- An 「AI 監控對象」 / "AI services to monitor" submenu in both the widget and tray context menus, with a check item per service (Claude, Codex) to start or stop tracking it without opening the Settings window; it stays in sync with the switches in the Settings window
 
 ## [1.0.0] - 2026-11-01
 

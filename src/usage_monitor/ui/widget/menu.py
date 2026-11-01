@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Protocol
 
 from PySide6.QtGui import QAction, QActionGroup
@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QMenu
 
 from usage_monitor.core.i18n import Lang, t
 from usage_monitor.ui import theme
+from usage_monitor.ui.viewmodel import ProviderInfo
 
 
 class MenuHost(Protocol):
@@ -30,6 +31,8 @@ class MenuHost(Protocol):
     @property
     def hotkey(self) -> str: ...
     @property
+    def catalog(self) -> Sequence[ProviderInfo]: ...
+    @property
     def update_menu_label(self) -> str | None:
         """有新版本時系統匣選單最上面那一行；沒有則 None。"""
         ...
@@ -41,6 +44,8 @@ class MenuHost(Protocol):
     def reset_position(self) -> None: ...
     def set_widget_visible(self, visible: bool) -> None: ...
     def set_autostart(self, enabled: bool) -> None: ...
+    def provider_enabled(self, provider_id: str) -> bool: ...
+    def set_provider_enabled(self, provider_id: str, enabled: bool) -> None: ...
     def open_settings(self) -> None: ...
     def open_log(self) -> None: ...
     def quit(self) -> None: ...
@@ -66,6 +71,23 @@ def _check(menu: QMenu, text: str, slot: Callable[[bool], None]) -> QAction:
     return action
 
 
+def _providers_menu(menu: QMenu, host: MenuHost) -> Callable[[], None]:
+    """「AI 監控對象 ›」子選單：每個服務一個可勾選項目；回傳打開選單前更新勾選狀態的函式。"""
+    sub = menu.addMenu(t(host.lang, "menu_providers"))
+    items: list[tuple[str, QAction]] = []
+    for pid, name in host.catalog:
+        a = sub.addAction(name)
+        a.setCheckable(True)
+        a.triggered.connect(lambda checked, p=pid: host.set_provider_enabled(p, checked))
+        items.append((pid, a))
+
+    def refresh() -> None:
+        for pid, a in items:
+            a.setChecked(host.provider_enabled(pid))
+
+    return refresh
+
+
 def build_widget_menu(host: MenuHost) -> QMenu:
     lang = host.lang
     menu = QMenu()
@@ -86,6 +108,7 @@ def build_widget_menu(host: MenuHost) -> QMenu:
     _action(menu, t(lang, "menu_reset_position"), host.reset_position)
     menu.addSeparator()
     hide = _action(menu, t(lang, "menu_hide"), lambda: host.set_widget_visible(False))
+    refresh_providers = _providers_menu(menu, host)
     _action(menu, t(lang, "menu_settings"), host.open_settings)
     _action(menu, t(lang, "menu_open_log"), host.open_log)
     menu.addSeparator()
@@ -93,6 +116,7 @@ def build_widget_menu(host: MenuHost) -> QMenu:
 
     def refresh_state() -> None:
         lock.setChecked(host.locked)
+        refresh_providers()
         hide.setText(f"{t(lang, 'menu_hide')}\t{host.hotkey}")
         for value, a in opacity_actions:
             a.setChecked(abs(value - host.opacity) < 0.01)
@@ -114,6 +138,7 @@ def build_tray_menu(host: MenuHost) -> QMenu:
     _action(menu, t(lang, "menu_reset_position"), host.reset_position)
     menu.addSeparator()
     autostart = _check(menu, t(lang, "menu_autostart"), host.set_autostart)
+    refresh_providers = _providers_menu(menu, host)
     _action(menu, t(lang, "menu_settings"), host.open_settings)
     _action(menu, t(lang, "menu_open_log"), host.open_log)
     menu.addSeparator()
@@ -127,6 +152,7 @@ def build_tray_menu(host: MenuHost) -> QMenu:
         visible.setChecked(host.widget_visible)
         lock.setChecked(host.locked)
         autostart.setChecked(host.autostart_enabled)
+        refresh_providers()
 
     menu.aboutToShow.connect(refresh_state)
     refresh_state()
