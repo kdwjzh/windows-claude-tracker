@@ -414,7 +414,7 @@ class SettingsDialog(QWidget):
 
     def apply_palette(self, palette: DialogPalette) -> None:
         self._palette = palette
-        self.setStyleSheet(stylesheet(palette))
+        self.setStyleSheet(stylesheet(palette, self._lang))
         for s in self._switches:
             s.set_palette(palette)
 

@@ -26,7 +26,7 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
    - `diagnose-vX.Y.Z.exe` (optional diagnostics tool; put it in the **same folder** as the app so "Run diagnostics" can find it)
    - Check the files against `SHA256SUMS.txt` if you like: `Get-FileHash .\ClaudeUsageTracker-vX.Y.Z.exe`
 2. Put the exe in a permanent folder (for example `%LOCALAPPDATA%\Programs\ClaudeUsageTracker\`) and double-click it
-3. The widget appears above the right end of the taskbar and an icon appears in the tray. Right-click → "Settings…" to turn on "Start with Windows"
+3. The widget appears above the right end of the taskbar and an icon appears in the tray. Right-click → "Open dashboard" to turn on "Start with Windows"
 
 Requirements: Windows 10/11 (64-bit). **Run it as a normal user**, not as administrator: Claude Desktop encrypts its token with Windows DPAPI, which only the signed-in user can decrypt.
 

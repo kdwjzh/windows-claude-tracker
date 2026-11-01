@@ -2,6 +2,13 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [SemVer](https://semver.org/).
 
+## [1.1.0] - 2026-11-02
+
+### Changed
+
+- The context menu item that opens the Settings window (in both the widget menu and the tray menu) is now called 「開啟儀表板」 / "Open dashboard" instead of 「設定…」 / "Settings…"
+- Settings window font: all text is bold; Traditional Chinese now uses Microsoft JhengHei (微軟正黑體), and English keeps the same font as before
+
 ## [1.0.0] - 2026-11-01
 
 First public release. The app works the same as 0.11.2; this version marks the move to a public repository.

@@ -119,6 +119,11 @@ METRICS = Metrics()
 
 FONT_FAMILIES = ["Microsoft JhengHei UI", "Segoe UI"]
 
+DIALOG_FONT_FAMILIES_ZH = ["Microsoft JhengHei", "Segoe UI"]
+"""設定視窗在繁體中文時用微軟正黑體；英文沿用 FONT_FAMILIES。"""
+DIALOG_FONT_WEIGHT = 700
+"""設定視窗所有文字都用粗體（中英文皆同）。"""
+
 
 @dataclass(frozen=True)
 class DialogPalette:

@@ -86,7 +86,7 @@ _ZH_TW: dict[str, str] = {
     "menu_hide": "隱藏小工具",
     "menu_show": "顯示小工具",
     "menu_autostart": "開機時啟動",
-    "menu_settings": "設定…",
+    "menu_settings": "開啟儀表板",
     "menu_open_log": "開啟 log",
     "menu_quit": "結束",
     # 設定視窗
@@ -217,7 +217,7 @@ _EN: dict[str, str] = {
     "menu_hide": "Hide widget",
     "menu_show": "Show widget",
     "menu_autostart": "Start with Windows",
-    "menu_settings": "Settings…",
+    "menu_settings": "Open dashboard",
     "menu_open_log": "Open log",
     "menu_quit": "Quit",
     "app_name": "Usage Monitor",

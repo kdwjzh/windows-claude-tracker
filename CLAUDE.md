@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v1.0.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v1.1.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
@@ -220,7 +220,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 **Interactions (artboard 3)**
 
 - After hovering 0.5 seconds, a detail card appears above the widget: service name, data source, each period's percentage and 「今天 20:20 重置（2時13分後）」/ "Resets today 20:20 (in 2h 13m)", last update time, and 「雙擊立即更新」/ "Double-click to refresh"
-- Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / Settings… / Open log / — / Quit
+- Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / Open dashboard (opens the Settings window) / Open log / — / Quit
 - While dragging, show a blue outline `#7fb3ff`; on release within 12 px of a work-area edge, snap to it (8 px from the edge after snapping)
 - Show/hide: tray left-click, the shortcut (`Ctrl+Alt+U` by default, changeable in Settings), or the context menu. Auto-hide in full screen (a maximized window isn't full screen); a manual hide is never undone by leaving full screen
 
@@ -231,13 +231,14 @@ The UI text examples below are in Traditional Chinese because the designs are; e
   - **Red dot** = needs action (not signed in, expired, rejected)
   - **Gray dot** = stale data (temporarily unreachable)
 - Tooltip: one line per service, for example `Claude 5h 42% · 2時13分 | 7d 18% · 4天3時`, **at most 127 characters** in total
-- Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / Settings… / Open log / — / Quit
+- Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / Open dashboard (opens the Settings window) / Open log / — / Quit
   - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens the Release page; the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
 - Windows notifications appear only when action is needed, once per error type; buttons "Run diagnostics" and "Close". A temporary network outage never notifies
 
 **Settings window (artboard 5)**
 
 - Windows 11 style, navigation on the left: General / Advanced / About
+- Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), Services (Claude and Codex switches + connection status and source)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics
 - About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with a "Download" link) / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)

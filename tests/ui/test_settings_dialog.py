@@ -265,3 +265,27 @@ def test_about_page_shows_license_and_disclaimer(setup) -> None:
     assert "與 Anthropic、OpenAI 無關" in dialog.disclaimer.text()
     store.update(lambda s: replace(s, language="en"))
     assert "not affiliated with Anthropic or OpenAI" in dialog_of(controller).disclaimer.text()
+
+
+def test_menus_open_dashboard(setup) -> None:
+    """右鍵選單（小工具與系統匣）開啟設定視窗的項目叫「開啟儀表板」／"Open dashboard"。"""
+    controller, store, _ = setup
+    tray_menu = controller.tray._menu  # pyright: ignore[reportPrivateUsage]
+    for menu in (controller.widget_menu, tray_menu):
+        assert "開啟儀表板" in [a.text() for a in menu.actions()]
+    store.update(lambda s: replace(s, language="en"))
+    tray_menu = controller.tray._menu  # pyright: ignore[reportPrivateUsage]
+    for menu in (controller.widget_menu, tray_menu):
+        assert "Open dashboard" in [a.text() for a in menu.actions()]
+
+
+def test_dialog_font_is_bold_and_follows_language(setup) -> None:
+    """繁體中文用微軟正黑體，英文沿用原本的字型；兩種語言都是粗體。"""
+    controller, store, _ = setup
+    sheet = dialog_of(controller).styleSheet()
+    assert 'font-family: "Microsoft JhengHei", "Segoe UI"' in sheet
+    assert "font-weight: 700" in sheet
+    store.update(lambda s: replace(s, language="en"))
+    sheet = dialog_of(controller).styleSheet()
+    assert 'font-family: "Microsoft JhengHei UI", "Segoe UI"' in sheet
+    assert "font-weight: 700" in sheet

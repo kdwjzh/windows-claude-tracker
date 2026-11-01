@@ -26,7 +26,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
    - `diagnose-vX.Y.Z.exe`（診斷工具，選用；放在主程式**同一個資料夾**，「執行診斷」才找得到）
    - 可用 `SHA256SUMS.txt` 核對檔案：`Get-FileHash .\ClaudeUsageTracker-vX.Y.Z.exe`
 2. 把 exe 放在固定的資料夾（例如 `%LOCALAPPDATA%\Programs\ClaudeUsageTracker\`），雙擊執行
-3. 工作列右側上方會出現小工具，系統匣也會有圖示；右鍵 →「設定…」可開啟開機時啟動
+3. 工作列右側上方會出現小工具，系統匣也會有圖示；右鍵 →「開啟儀表板」可開啟開機時啟動
 
 需求：Windows 10／11（64 位元）。**請用一般使用者身分執行**，不要用系統管理員：桌面版的 token 用 Windows DPAPI 加密，只有登入的那個使用者解得開。
 

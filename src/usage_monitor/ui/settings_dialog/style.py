@@ -2,14 +2,27 @@
 
 from __future__ import annotations
 
-from usage_monitor.ui.theme import FONT_FAMILIES, DialogPalette
+from usage_monitor.core.i18n import Lang
+from usage_monitor.ui.theme import (
+    DIALOG_FONT_FAMILIES_ZH,
+    DIALOG_FONT_WEIGHT,
+    FONT_FAMILIES,
+    DialogPalette,
+)
 
 
-def stylesheet(p: DialogPalette) -> str:
-    families = ", ".join(f'"{f}"' for f in FONT_FAMILIES)
+def font_families(lang: Lang) -> list[str]:
+    return DIALOG_FONT_FAMILIES_ZH if lang is Lang.ZH_TW else FONT_FAMILIES
+
+
+def stylesheet(p: DialogPalette, lang: Lang) -> str:
+    families = ", ".join(f'"{f}"' for f in font_families(lang))
+    bold = DIALOG_FONT_WEIGHT
     return f"""
     QWidget#settingsRoot {{ background: {p.window}; }}
-    QWidget {{ font-family: {families}; font-size: 14px; color: {p.text}; }}
+    QWidget {{
+        font-family: {families}; font-size: 14px; font-weight: {bold}; color: {p.text};
+    }}
     QLabel {{ background: transparent; }}
 
     QListWidget#nav {{ background: transparent; border: none; outline: none; }}
@@ -24,8 +37,8 @@ def stylesheet(p: DialogPalette) -> str:
 
     QScrollArea {{ background: transparent; border: none; }}
     QWidget#page {{ background: transparent; }}
-    QLabel#pageTitle {{ font-size: 28px; font-weight: 600; }}
-    QLabel#section {{ font-size: 14px; font-weight: 600; padding-top: 14px; }}
+    QLabel#pageTitle {{ font-size: 28px; }}
+    QLabel#section {{ font-size: 14px; padding-top: 14px; }}
 
     QWidget#card {{
         background: {p.card}; border: 1px solid {p.card_border}; border-radius: 6px;
