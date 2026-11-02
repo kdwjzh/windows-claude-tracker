@@ -44,7 +44,8 @@ class NoteKind(Enum):
 @dataclass(frozen=True)
 class RowVM:
     label: str
-    filled: int
+    filled: float
+    """亮了幾格（0–10，可以有小數）：每 1% 是一格的 1/10，例如 42% → 4.2 格。"""
     level: Level | None
     text: str
     style: RowStyle
@@ -121,11 +122,13 @@ ProviderInfo = tuple[str, str]
 # ---------------------------------------------------------------- 文字
 
 
-def segments_for(percent: float) -> int:
-    """42% → 4 格、18% → 2 格、6% → 1 格（只要用過就至少亮一格）、0% → 0 格。"""
-    if percent <= 0:
-        return 0
-    return min(SEGMENTS, max(1, int(percent / 10 + 0.5)))
+def segments_for(percent: float) -> float:
+    """每 1% 是一格的 1/10：42% → 4.2 格、6% → 0.6 格、0% → 0 格。
+
+    先四捨五入成整數百分比，進度條才會跟旁邊顯示的「42%」一致。
+    """
+    whole = min(SEGMENTS * 10, max(0, int(percent + 0.5)))
+    return whole / 10
 
 
 def percent_text(percent: float) -> str:

@@ -2,6 +2,13 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [SemVer](https://semver.org/).
 
+## [1.2.0] - 2026-11-02
+
+### Changed
+
+- The widget's 10-segment bar now fills continuously: each 1% fills a tenth of a segment (42% → 4 segments + 2/10 of the fifth). Previously each segment stood for 10% and any usage from 1% to 14% lit a whole segment. The percentage is rounded to a whole number first, so the bar always matches the text next to it
+- `RowVM.filled` is now a float (0–10)
+
 ## [1.1.0] - 2026-11-02
 
 ### Changed

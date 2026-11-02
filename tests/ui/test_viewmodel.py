@@ -69,12 +69,12 @@ def test_state_1_normal_two_services() -> None:
     claude, codex = result.columns
     assert claude.title == "Claude" and claude.note is None
     assert claude.rows == (
-        RowVM("5h", 4, Level.OK, "42% · 2時13分", RowStyle.NORMAL),
-        RowVM("7d", 2, Level.OK, "18% · 4天3時", RowStyle.NORMAL),
+        RowVM("5h", 4.2, Level.OK, "42% · 2時13分", RowStyle.NORMAL),
+        RowVM("7d", 1.8, Level.OK, "18% · 4天3時", RowStyle.NORMAL),
     )
     assert codex.rows == (
-        RowVM("5h", 1, Level.OK, "12% · 3時40分", RowStyle.NORMAL),
-        RowVM("30d", 1, Level.OK, "6% · 29天", RowStyle.NORMAL),  # 依實際週期，不寫死 7d
+        RowVM("5h", 1.2, Level.OK, "12% · 3時40分", RowStyle.NORMAL),
+        RowVM("30d", 0.6, Level.OK, "6% · 29天", RowStyle.NORMAL),  # 依實際週期，不寫死 7d
     )
 
 
@@ -82,8 +82,8 @@ def test_state_2_near_limit() -> None:
     u = usage(78, 48 * M, 93, 1 * D + 2 * H)
     (column,) = vm({"claude": ok("claude", u)}, [CLAUDE]).columns
     assert column.rows == (
-        RowVM("5h", 8, Level.WARN, "78% · 48分", RowStyle.NORMAL),
-        RowVM("7d", 9, Level.CRIT, "93% · 1天2時", RowStyle.NORMAL),
+        RowVM("5h", 7.8, Level.WARN, "78% · 48分", RowStyle.NORMAL),
+        RowVM("7d", 9.3, Level.CRIT, "93% · 1天2時", RowStyle.NORMAL),
     )
 
 
@@ -95,7 +95,7 @@ def test_state_3_full_shows_local_reset_time() -> None:
     )
     (column,) = vm({"claude": ok("claude", u)}, [CLAUDE]).columns
     assert column.rows[0] == RowVM("5h", 10, Level.CRIT, "滿 · 20:15 重置", RowStyle.NORMAL)
-    assert column.rows[1] == RowVM("7d", 6, Level.OK, "64% · 3天5時", RowStyle.NORMAL)
+    assert column.rows[1] == RowVM("7d", 6.4, Level.OK, "64% · 3天5時", RowStyle.NORMAL)
 
 
 def test_state_4_not_logged_in_other_column_unaffected() -> None:
@@ -191,7 +191,7 @@ def test_unreported_window_shows_empty_bar_and_zero() -> None:
     (column,) = vm({"codex": ok("codex", u, "Codex CLI")}, [CODEX]).columns
     assert column.rows == (
         RowVM("5h", 0, Level.OK, "0%", RowStyle.NORMAL),
-        RowVM("30d", 3, Level.OK, "32% · 29天", RowStyle.NORMAL),
+        RowVM("30d", 3.2, Level.OK, "32% · 29天", RowStyle.NORMAL),
     )
 
 
@@ -216,10 +216,11 @@ def test_missing_labels_use_defaults() -> None:
 
 @pytest.mark.parametrize(
     ("percent", "filled"),
-    [(0, 0), (0.1, 1), (6, 1), (12, 1), (15, 2), (18, 2), (42, 4), (78, 8), (93, 9), (100, 10),
-     (130, 10), (-5, 0)],
+    [(0, 0), (0.4, 0), (1, 0.1), (6, 0.6), (12, 1.2), (15, 1.5), (18, 1.8), (41.6, 4.2),
+     (42, 4.2), (78, 7.8), (93, 9.3), (100, 10), (130, 10), (-5, 0)],
 )  # fmt: skip
-def test_segments_for(percent: float, filled: int) -> None:
+def test_segments_for(percent: float, filled: float) -> None:
+    """2026-11-02 改成連續填滿：每 1% 是一格的 1/10（原本 1–14% 都算一整格）。"""
     assert segments_for(percent) == filled
 
 

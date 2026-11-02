@@ -181,19 +181,27 @@ def _paint_row(
     bx = x + label_w
     top = center - m.seg_h / 2
     p.setPen(Qt.PenStyle.NoPen)
+    fill_color = (
+        palette.level_color(row.level, stale=row.style is RowStyle.STALE)
+        if row.level is not None and row.style is not RowStyle.ERROR
+        else None
+    )
     for i in range(m.segments):
-        if row.style is RowStyle.ERROR:
-            color = palette.seg_error
-        elif i < row.filled and row.level is not None:
-            color = palette.level_color(row.level, stale=row.style is RowStyle.STALE)
-        else:
-            color = palette.seg_empty
-        p.setBrush(_color(color))
-        p.drawRoundedRect(
-            QRectF(bx + i * (m.seg_w + m.seg_gap), top, m.seg_w, m.seg_h),
-            m.seg_radius,
-            m.seg_radius,
-        )
+        seg = QRectF(bx + i * (m.seg_w + m.seg_gap), top, m.seg_w, m.seg_h)
+        empty = palette.seg_error if row.style is RowStyle.ERROR else palette.seg_empty
+        p.setBrush(_color(empty))
+        p.drawRoundedRect(seg, m.seg_radius, m.seg_radius)
+        # 這一格亮多少（0–1）：每 1% 是一格的 1/10，從左往右填
+        fraction = min(1.0, max(0.0, row.filled - i))
+        if fill_color is None or fraction <= 0:
+            continue
+        shape = QPainterPath()
+        shape.addRoundedRect(seg, m.seg_radius, m.seg_radius)
+        p.save()
+        p.setClipPath(shape)
+        p.setBrush(_color(fill_color))
+        p.drawRect(QRectF(seg.x(), seg.y(), seg.width() * fraction, seg.height()))
+        p.restore()
 
     tx = bx + m.bar_w + m.bar_text_gap
     text_rect = QRectF(tx, y, rect.right() + 1 - tx, m.row_h)

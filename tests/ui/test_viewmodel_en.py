@@ -54,8 +54,8 @@ def test_normal_rows() -> None:
     u = Usage(win(42, 2 * H + 13 * M, "5h"), win(18, 4 * D + 3 * H, "7d"), NOW)
     (column,) = build_widget_vm([CLAUDE], {"claude": ok("claude", u)}, NOW, lang=EN).columns
     assert column.rows == (
-        RowVM("5h", 4, Level.OK, "42% · 2h 13m", RowStyle.NORMAL),
-        RowVM("7d", 2, Level.OK, "18% · 4d 3h", RowStyle.NORMAL),
+        RowVM("5h", 4.2, Level.OK, "42% · 2h 13m", RowStyle.NORMAL),
+        RowVM("7d", 1.8, Level.OK, "18% · 4d 3h", RowStyle.NORMAL),
     )
 
 

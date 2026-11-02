@@ -11,10 +11,11 @@ import pytest
 pytest.importorskip("pytestqt")
 
 from PySide6.QtCore import QPoint, QRect, Qt
-from PySide6.QtGui import QImage
+from PySide6.QtGui import QColor, QImage, QPainter
 
 from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
+from usage_monitor.core.levels import level_of
 from usage_monitor.core.models import ProviderState, Usage, Window
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -320,3 +321,27 @@ def test_controller_end_to_end(qtbot, qapp, tmp_path: Path) -> None:
         assert refreshed == [1] and quit_called == [1]
     finally:
         controller.shutdown()
+
+
+@pytest.mark.usefixtures("qapp")
+@pytest.mark.parametrize(("percent", "lit_px"), [(40, 32), (45, 36), (1, 1), (0, 0), (100, 80)])
+def test_bar_fills_a_tenth_of_a_segment_per_percent(percent: float, lit_px: int) -> None:
+    """2026-11-02：每 1% 填滿一格的 1/10（每格 8px），不再是「1–14% 都亮一整格」。"""
+    u = Usage(Window(True, percent, None, "5h"), Window(True, 0, None, "7d"), NOW)
+    vm = build_widget_vm(
+        [("claude", "Claude")], {"claude": ProviderState("claude", u, None, False, None)}, NOW
+    )
+    lay = painter.layout(vm)
+    img = QImage(lay.width, lay.height, QImage.Format.Format_ARGB32)
+    img.fill(0)
+    p = QPainter(img)
+    painter.paint(p, vm, theme.DARK, opacity=1.0)
+    p.end()
+    m = theme.METRICS
+    y = int(m.pad_t + m.title_h + m.row_h / 2)  # 第一列（5h）的中線
+    ok = QColor(theme.DARK.level_color(level_of(percent)))
+    empty = QColor(theme.DARK.seg_empty)
+    row = [img.pixelColor(x, y) for x in range(lay.width)]
+    lit = sum(c.rgb() == ok.rgb() for c in row)
+    assert abs(lit - lit_px) <= 1  # 允許邊緣反鋸齒誤差
+    assert any(c.rgb() == empty.rgb() for c in row) is (percent < 100)

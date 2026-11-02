@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v1.1.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v1.2.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
@@ -207,7 +207,8 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Dark panel `#232428`, 1 px border `#3a3c42`, 8 px corner radius; a 3 px drag handle `#5b5f67` on the left; a 1 px divider between the two columns
 - **Each column shows the service name on top** (11 px, `#a0a4ab`); **each column shows its own period labels** (Codex may show `30d`)
 - Each row: label (26 px wide) + 10-segment bar (each segment 8×14 px, 2 px gap, 2 px radius) + (a red `!` only on error) + text (about 92–112 px wide, enough for at least 「滿 · 20:15 重置」/ "Full · resets 20:15")
-- Bar colors: < 70% `#35c27a`, 70–89% `#f0b232`, ≥ 90% `#f05a46`; empty segments `#3b3e45`
+- Bar fill: **each 1% fills a tenth of a segment**, left to right (42% → 4 full segments + 2/10 of the fifth; 0% → empty); the percentage is rounded to a whole number first so the bar matches the text (decided 2026-11-02)
+- Bar colors: < 70% `#35c27a`, 70–89% `#f0b232`, ≥ 90% `#f05a46` (every lit part of the bar uses the same color); empty segments `#3b3e45`
 - Text color `#e6e6e6`; secondary text `#a0a4ab`
 - States (artboard 2):
   - **Limit reached**: the text becomes 「滿 · 20:15 重置」/ "Full · resets 20:15" (the local reset time)
