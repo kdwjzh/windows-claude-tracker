@@ -324,9 +324,9 @@ def test_controller_end_to_end(qtbot, qapp, tmp_path: Path) -> None:
 
 
 @pytest.mark.usefixtures("qapp")
-@pytest.mark.parametrize(("percent", "lit_px"), [(40, 32), (45, 36), (1, 1), (0, 0), (100, 80)])
-def test_bar_fills_a_tenth_of_a_segment_per_percent(percent: float, lit_px: int) -> None:
-    """2026-11-02：每 1% 填滿一格的 1/10（每格 8px），不再是「1–14% 都亮一整格」。"""
+@pytest.mark.parametrize("percent", [40, 45, 1, 0, 100])
+def test_bar_fills_a_tenth_of_a_segment_per_percent(percent: float) -> None:
+    """2026-11-02：每 1% 填滿一格的 1/10，不再是「1–14% 都亮一整格」。"""
     u = Usage(Window(True, percent, None, "5h"), Window(True, 0, None, "7d"), NOW)
     vm = build_widget_vm(
         [("claude", "Claude")], {"claude": ProviderState("claude", u, None, False, None)}, NOW
@@ -343,5 +343,16 @@ def test_bar_fills_a_tenth_of_a_segment_per_percent(percent: float, lit_px: int)
     empty = QColor(theme.DARK.seg_empty)
     row = [img.pixelColor(x, y) for x in range(lay.width)]
     lit = sum(c.rgb() == ok.rgb() for c in row)
+    lit_px = percent / 10 * m.seg_w  # 亮起來的總寬度（格子間距不算）
     assert abs(lit - lit_px) <= 1  # 允許邊緣反鋸齒誤差
     assert any(c.rgb() == empty.rgb() for c in row) is (percent < 100)
+
+
+def test_service_title_colors() -> None:
+    """2026-11-02：欄名依服務上色（Claude 橘、Codex 白）；沒指定顏色的服務用預設的次要文字色。"""
+    assert theme.DARK.title_color("claude") == "#e08a5f"
+    assert theme.DARK.title_color("codex") == "#ffffff"
+    assert theme.DARK.title_color("cursor") == theme.DARK.text_secondary
+    # 淺色主題的 Codex 不能是白字（底色是淺灰）
+    assert theme.LIGHT.title_color("codex") == theme.LIGHT.text
+    assert theme.LIGHT.title_color("cursor") == theme.LIGHT.text_secondary

@@ -5,7 +5,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from usage_monitor.core.levels import Level
 
@@ -30,6 +31,12 @@ class Palette:
     error_text: str
     error_mark: str
     drag_border: str
+    provider_titles: Mapping[str, str] = field(default_factory=lambda: {})
+    """各服務的欄名顏色（provider id → 顏色）；沒列出的服務用 text_secondary。
+    新增監控對象時先問維護者要什麼顏色，沒有指定就不用加。"""
+
+    def title_color(self, provider_id: str) -> str:
+        return self.provider_titles.get(provider_id, self.text_secondary)
 
     def level_color(self, level: Level, *, stale: bool = False) -> str:
         if stale:
@@ -58,6 +65,7 @@ DARK = Palette(
     error_text="#f08b7d",
     error_mark="#f05a46",
     drag_border="#7fb3ff",
+    provider_titles={"claude": "#e08a5f", "codex": "#ffffff"},
 )
 
 LIGHT = Palette(
@@ -79,6 +87,8 @@ LIGHT = Palette(
     error_text="#c5221f",
     error_mark="#e0483a",
     drag_border="#3b82f6",
+    # 淺色底上白字看不到：Codex 改用最深的文字色，Claude 用深一點的橘色
+    provider_titles={"claude": "#c25a2c", "codex": "#1f1f1f"},
 )
 
 
@@ -90,24 +100,24 @@ class Metrics:
     handle_pad_l: int = 10
     handle_pad_r: int = 10
     pad_r: int = 8
-    pad_t: int = 7
-    pad_b: int = 8
-    title_h: int = 16
-    title_px: int = 11
-    row_h: int = 19
-    row_px: int = 12
-    label_w: int = 24
+    pad_t: int = 6
+    pad_b: int = 7
+    title_h: int = 14
+    title_px: int = 10
+    row_h: int = 16
+    row_px: int = 11
+    label_w: int = 21
     """週期標籤的最小寬度；「30d」這類較寬的標籤會依實際寬度＋label_gap 撐開。"""
-    label_gap: int = 5
+    label_gap: int = 4
     segments: int = 10
-    seg_w: int = 8
-    seg_h: int = 14
+    seg_w: int = 6
+    seg_h: int = 11
     seg_gap: int = 2
     seg_radius: int = 2
-    bar_text_gap: int = 6
+    bar_text_gap: int = 5
     text_slack: int = 4
     """文字後面留的空隙：欄寬 = 這一欄目前最長文字的實際寬度＋這個值（不貼齊邊框）。"""
-    col_gap: int = 12
+    col_gap: int = 10
     """兩欄之間（分隔線兩側各一半）。"""
 
     @property

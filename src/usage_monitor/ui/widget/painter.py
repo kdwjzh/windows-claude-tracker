@@ -143,7 +143,7 @@ def _paint_handle(p: QPainter, locked: bool, palette: Palette, height: int, m: M
 def _paint_column(p: QPainter, c: ColumnVM, rect: QRect, palette: Palette, m: Metrics) -> None:
     title_font = font(m.title_px)
     p.setFont(title_font)
-    p.setPen(_color(palette.text_secondary))
+    p.setPen(_color(palette.title_color(c.provider_id)))
     title_rect = QRect(rect.x(), m.pad_t, rect.width(), m.title_h)
     p.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, c.title)
     if c.note:

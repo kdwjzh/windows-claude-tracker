@@ -2,6 +2,13 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [SemVer](https://semver.org/).
 
+## [1.3.0] - 2026-11-02
+
+### Changed
+
+- Service names on the widget are colored per service so two columns are easy to tell apart: Claude orange, Codex white (in the light theme, darker orange and near-black, since white wouldn't show on the light background). Services without an assigned color keep the default gray
+- Smaller widget: text 12 → 11 px (service names 11 → 10 px), bar segments 8×14 → 6×11 px, rows 19 → 16 px, with slightly tighter spacing. The two-column widget goes from about 447×69 to 386×59 logical pixels
+
 ## [1.2.0] - 2026-11-02
 
 ### Changed
