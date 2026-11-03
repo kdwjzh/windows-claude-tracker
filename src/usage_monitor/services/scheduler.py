@@ -24,6 +24,8 @@ RETRY_BASE_SECONDS = 30.0
 AUTH_RECHECK_SECONDS = 60.0
 RESET_GRACE_SECONDS = 10.0
 MIN_DELAY_SECONDS = 10.0
+MAX_WAIT_SECONDS = 60.0
+"""等待的上限：電腦睡眠時等待計時不一定前進，每分鐘至少醒來一次比對牆上時間。"""
 
 
 @dataclass
@@ -51,6 +53,11 @@ def next_after_success(usage: Usage, now: datetime, interval: float) -> datetime
         if window.resets_at is not None and window.resets_at > now:
             due = min(due, window.resets_at + timedelta(seconds=RESET_GRACE_SECONDS))
     return max(due, now + timedelta(seconds=MIN_DELAY_SECONDS))
+
+
+def wait_seconds(wake_at: datetime, now: datetime) -> float:
+    """排程執行緒這次要等幾秒（0 到 MAX_WAIT_SECONDS）。"""
+    return min(max(0.0, (wake_at - now).total_seconds()), MAX_WAIT_SECONDS)
 
 
 class Scheduler:
@@ -224,6 +231,5 @@ class Scheduler:
             except Exception:  # 理論上 tick 不會丟例外；保險起見不讓執行緒停掉
                 log.exception("排程發生未預期錯誤")
                 wake_at = self._clock.now() + timedelta(seconds=MIN_DELAY_SECONDS)
-            timeout = max(0.0, (wake_at - self._clock.now()).total_seconds())
-            self._wake.wait(timeout)
+            self._wake.wait(wait_seconds(wake_at, self._clock.now()))
             self._wake.clear()

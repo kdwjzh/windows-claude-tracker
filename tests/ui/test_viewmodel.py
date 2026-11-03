@@ -279,7 +279,8 @@ def test_hover_card_stale_error_and_missing() -> None:
 def test_hover_card_reset_in_past() -> None:
     u = Usage(Window(True, 42, NOW - M, "5h"), Window(True, 1, None, "7d"), NOW)
     hover = vm({"claude": ok("claude", u)}, [CLAUDE]).columns[0].hover
-    assert hover.lines[0].detail == "即將重置"
+    # 重置時間已過：不再說「即將重置」，舊百分比也不再顯示（ROADMAP 第 2 項）
+    assert hover.lines[0] == HoverLineVM("5 小時", "0%", Level.OK, "已重置 · 更新中")
 
 
 def test_hover_card_loading() -> None:
@@ -425,3 +426,25 @@ def test_columns_are_independent_objects() -> None:
     result = vm({"claude": ok("claude", CLAUDE_NORMAL)})
     assert isinstance(result.columns[0], ColumnVM)
     assert result.columns[1].note == "讀取中…"
+
+
+# ---------------------------------------------------------------- 重置時間已過（睡眠喚醒）
+
+
+def test_reset_passed_clears_bar_until_next_poll() -> None:
+    """前一晚的「5h 100%」在重置時間過後不能繼續亮紅色（ROADMAP 第 2 項）。"""
+    u = usage(100, -8 * H, 64, 3 * D + 5 * H)
+    state = ok("claude", u)
+    (column,) = vm({"claude": state}, [CLAUDE]).columns
+    assert column.rows[0] == RowVM("5h", 0, Level.OK, "已重置 · 更新中", RowStyle.NORMAL)
+    assert column.rows[1] == RowVM("7d", 6.4, Level.OK, "64% · 3天5時", RowStyle.NORMAL)
+    assert column.hover.lines[0] == HoverLineVM("5 小時", "0%", Level.OK, "已重置 · 更新中")
+    tray = build_tray_vm([CLAUDE], {"claude": state}, NOW, tz=TPE)
+    assert tray.bars[0] == TrayBar(0, Level.OK)
+    assert "5h 已重置 · 更新中" in tray.tooltip
+
+
+def test_reset_exactly_now_counts_as_passed() -> None:
+    u = Usage(Window(True, 80, NOW, "5h"), win(18, 4 * D, "7d"), NOW - 2 * M)
+    (column,) = vm({"claude": ok("claude", u)}, [CLAUDE]).columns
+    assert column.rows[0].text == "已重置 · 更新中"

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from usage_monitor.platform import autostart, fullscreen, hotkey, launch
+from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power
 
 
 @pytest.mark.parametrize(
@@ -36,6 +36,7 @@ def test_register_rejects_bad_hotkey_without_raising() -> None:
 
 def test_is_hotkey_message_null_pointer() -> None:
     assert hotkey.is_hotkey_message(0, 1) is False
+    assert power.is_resume_message(0) is False
 
 
 def test_autostart_command_source() -> None:

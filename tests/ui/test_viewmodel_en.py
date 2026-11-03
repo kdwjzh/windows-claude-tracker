@@ -59,6 +59,13 @@ def test_normal_rows() -> None:
     )
 
 
+def test_reset_passed() -> None:
+    u = Usage(win(100, -8 * H, "5h"), win(18, 4 * D + 3 * H, "7d"), NOW - 9 * H)
+    (column,) = build_widget_vm([CLAUDE], {"claude": ok("claude", u)}, NOW, lang=EN).columns
+    assert column.rows[0] == RowVM("5h", 0, Level.OK, "Reset · updating", RowStyle.NORMAL)
+    assert column.hover.lines[0].detail == "Reset · updating"
+
+
 def test_full_and_month() -> None:
     full = Window(True, 100, datetime(2026, 10, 29, 12, 15, tzinfo=UTC), "5h")
     assert window_text(full, NOW, TPE, EN) == "Full · resets 20:15"

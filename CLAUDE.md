@@ -145,6 +145,7 @@ Other rules:
 - On failure, keep the last data and mark it `stale`
 - When any window's `resets_at` is near, schedule another poll at `resets_at + 10 seconds`
 - Countdown text is redrawn every 60 seconds without calling the API
+- **Sleep and resume** (added 2026-11-04): on `WM_POWERBROADCAST` / `PBT_APMRESUMEAUTOMATIC` (`platform/power.py`) the UI redraws and polls immediately; as a fallback that doesn't depend on Windows messages (Modern Standby may not send one), the polling thread never waits longer than 60 seconds before comparing wall-clock time with each service's next due time
 - Only one poll runs at a time; manual refresh wakes the loop with a `threading.Event`
 
 **Credential signatures**: the CLI file uses "path + size + mtime"; the desktop app uses the SHA-256 of the `oauth:tokenCache*` ciphertext. **Don't use the mtime of the desktop `config.json`**: the desktop app rewrites it often, for example to save the window position.
@@ -211,6 +212,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Bar colors: < 70% `#35c27a`, 70–89% `#f0b232`, ≥ 90% `#f05a46` (every lit part of the bar uses the same color); empty segments `#3b3e45`
 - Text color `#e6e6e6`; secondary text `#a0a4ab`
 - States (artboard 2):
+  - **Reset time passed** (no new data yet, for example right after waking from sleep): the bar empties and the text becomes 「已重置 · 更新中」/ "Reset · updating"; the tray bar and hover card show 0% too (added 2026-11-04)
   - **Limit reached**: the text becomes 「滿 · 20:15 重置」/ "Full · resets 20:15" (the local reset time)
   - **Can't find a sign-in**: the bar turns all gray `#4a4d55`, a red `!` follows, the text is `—`, and a red reason appears next to the column name (for example 「未登入」/ "Not signed in", `#f08b7d`); the other column is unaffected
   - **Stale data**: the bar turns dark green `#5f7d6c`, the text dims to `#7c8088`, and 「12 分鐘前」/ "12 min ago" appears next to the column name
@@ -358,6 +360,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ single_instance.py
 │  │  ├─ hotkey.py             RegisterHotKey
 │  │  ├─ fullscreen.py         whether the foreground window is full screen
+│  ├─ power.py              recognizes the resume-from-sleep message (WM_POWERBROADCAST)
 │  │  └─ topmost.py            WS_EX_NOACTIVATE, re-assert TOPMOST
 │  │
 │  ├─ services/                ③ application logic: no Qt imports, testable on Linux

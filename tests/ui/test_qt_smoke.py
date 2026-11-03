@@ -319,6 +319,8 @@ def test_controller_end_to_end(qtbot, qapp, tmp_path: Path) -> None:
         controller.refresh()
         controller.quit()
         assert refreshed == [1] and quit_called == [1]
+        controller._on_resume()  # pyright: ignore[reportPrivateUsage]  # 睡眠喚醒 → 立即更新
+        assert refreshed == [1, 1]
     finally:
         controller.shutdown()
 

@@ -11,9 +11,11 @@ from fakes import FakeClock, FakeProvider
 from usage_monitor.core.errors import ErrKind, PollError
 from usage_monitor.core.models import ProviderState, Usage, Window
 from usage_monitor.services.scheduler import (
+    MAX_WAIT_SECONDS,
     Scheduler,
     backoff_seconds,
     next_after_success,
+    wait_seconds,
 )
 from usage_monitor.services.state_store import StateStore
 
@@ -121,6 +123,25 @@ def test_not_polled_before_due() -> None:
     h.clock.advance(1)
     h.tick()
     assert p.poll_count == 2
+
+
+def test_clock_jump_after_sleep_polls_overdue_provider() -> None:
+    """睡眠 8 小時後醒來：牆上時間已超過 next_due，下一次 tick 立即輪詢。"""
+    p = FakeProvider("claude", [usage(), usage()])
+    h = Harness(p)
+    h.tick()
+    h.clock.advance(8 * 3600)
+    h.tick()
+    assert p.poll_count == 2
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [(-5, 0), (0, 0), (30, 30), (MAX_WAIT_SECONDS, MAX_WAIT_SECONDS), (300, MAX_WAIT_SECONDS)],
+)
+def test_wait_seconds_is_capped(seconds: float, expected: float) -> None:
+    """等待有上限：睡眠期間的等待計時不一定前進，每分鐘至少醒來比一次牆上時間。"""
+    assert wait_seconds(T0 + timedelta(seconds=seconds), T0) == expected
 
 
 def test_reset_soon_schedules_early_poll() -> None:

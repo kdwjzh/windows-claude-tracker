@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import ctypes
 import uuid
 
 import pytest
 
-from usage_monitor.platform import autostart, fullscreen
+from usage_monitor.platform import autostart, fullscreen, power
 from usage_monitor.platform.single_instance import SingleInstance
 
 pytestmark = pytest.mark.windows
@@ -31,3 +32,18 @@ def test_fullscreen_check_runs() -> None:
 
 def test_autostart_is_enabled_reads_registry() -> None:
     assert isinstance(autostart.is_enabled(), bool)
+
+
+@pytest.mark.parametrize(
+    ("message", "wparam", "expected"),
+    [
+        (power.WM_POWERBROADCAST, power.PBT_APMRESUMEAUTOMATIC, True),
+        (power.WM_POWERBROADCAST, 0x0004, False),  # PBT_APMSUSPEND：要睡了，不是醒來
+        (0x0312, power.PBT_APMRESUMEAUTOMATIC, False),
+    ],
+)
+def test_is_resume_message(message: int, wparam: int, expected: bool) -> None:
+    from ctypes import wintypes
+
+    msg = wintypes.MSG(None, message, wparam, 0)
+    assert power.is_resume_message(ctypes.addressof(msg)) is expected

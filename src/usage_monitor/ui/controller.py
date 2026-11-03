@@ -20,7 +20,7 @@ from usage_monitor.core import app_info
 from usage_monitor.core.i18n import Lang, resolve_language, t
 from usage_monitor.core.interfaces import Clock
 from usage_monitor.core.models import ProviderState
-from usage_monitor.platform import autostart, fullscreen, hotkey, launch, topmost
+from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power, topmost
 from usage_monitor.services.settings.schema import Settings, WidgetSettings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -47,17 +47,22 @@ log = logging.getLogger(__name__)
 HOTKEY_ID = 0x5531
 
 
-class _HotkeyFilter(QAbstractNativeEventFilter):
-    def __init__(self, callback: Callable[[], None]) -> None:
+class _NativeFilter(QAbstractNativeEventFilter):
+    """快捷鍵（WM_HOTKEY）與睡眠喚醒（WM_POWERBROADCAST）。"""
+
+    def __init__(self, on_hotkey: Callable[[], None], on_resume: Callable[[], None]) -> None:
         super().__init__()
-        self._callback = callback
+        self._on_hotkey = on_hotkey
+        self._on_resume = on_resume
 
     def nativeEventFilter(self, event_type, message):  # noqa: N802 - Qt 的介面
-        if event_type == b"windows_generic_MSG" and hotkey.is_hotkey_message(
-            int(message), HOTKEY_ID
-        ):
-            QTimer.singleShot(0, self._callback)
+        if event_type != b"windows_generic_MSG":
+            return False, 0
+        if hotkey.is_hotkey_message(int(message), HOTKEY_ID):
+            QTimer.singleShot(0, self._on_hotkey)
             return True, 0
+        if power.is_resume_message(int(message)):
+            QTimer.singleShot(0, self._on_resume)  # 不攔截：其他視窗也要收到
         return False, 0
 
 
@@ -155,7 +160,7 @@ class Controller(QObject):
         self._housekeeping.setInterval(theme.HOUSEKEEPING_MS)
         self._housekeeping.timeout.connect(self._on_housekeeping)
 
-        self._hotkey_filter = _HotkeyFilter(self.toggle_widget)
+        self._hotkey_filter = _NativeFilter(self.toggle_widget, self._on_resume)
         app.installNativeEventFilter(self._hotkey_filter)
 
         app.screenAdded.connect(self._on_screens_changed)
@@ -209,6 +214,12 @@ class Controller(QObject):
         return self._settings.widget.hotkey
 
     def refresh(self) -> None:
+        self._refresh()
+
+    def _on_resume(self) -> None:
+        """睡眠喚醒：先重畫（已過重置時間的週期馬上清空），再立即更新。"""
+        log.info("從睡眠喚醒，立即更新")
+        self._render()
         self._refresh()
 
     def set_locked(self, locked: bool) -> None:

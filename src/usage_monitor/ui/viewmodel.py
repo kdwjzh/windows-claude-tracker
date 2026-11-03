@@ -135,10 +135,17 @@ def percent_text(percent: float) -> str:
     return f"{int(percent + 0.5)}%"
 
 
+def reset_passed(w: Window, now: datetime) -> bool:
+    """重置時間已過、還沒拿到新資料（例如睡眠喚醒後）：舊百分比已經不對了。"""
+    return w.available and w.resets_at is not None and w.resets_at <= now
+
+
 def window_text(w: Window, now: datetime, tz: tzinfo | None = None, lang: Lang = Lang.ZH_TW) -> str:
     """「42% · 2時13分」「42% · 2h 13m」；已滿時「滿 · 20:15 重置」「Full · resets 20:15」。"""
     if not w.available:
         return EMPTY
+    if reset_passed(w, now):
+        return t(lang, "reset_updating")
     if w.percent >= 100:
         if w.resets_at is None:
             return t(lang, "full")
@@ -225,6 +232,8 @@ def _row(
     if not w.available:
         # 服務沒有這個週期（例如 Codex 只有 30 天額度）：照樣畫空的計量條並顯示 0%
         return RowVM(label, 0, Level.OK, UNREPORTED_TEXT, style)
+    if reset_passed(w, now):
+        return RowVM(label, 0, Level.OK, window_text(w, now, tz, lang), style)
     return RowVM(
         label, segments_for(w.percent), level_of(w.percent), window_text(w, now, tz, lang), style
     )
@@ -243,6 +252,10 @@ def _hover(
             if not w.available:
                 detail = t(lang, "unreported_detail")
                 lines.append(HoverLineVM(period, UNREPORTED_TEXT, None, detail))
+                continue
+            if reset_passed(w, now):
+                detail = t(lang, "reset_updating")
+                lines.append(HoverLineVM(period, percent_text(0), Level.OK, detail))
                 continue
             if w.resets_at is None:
                 detail = t(lang, "hover_reset_unknown")
@@ -355,11 +368,14 @@ def build_tray_vm(
     if providers:
         first = states.get(providers[0][0])
         if first is not None and first.usage is not None and not needs_action(first):
-            s, lw = first.usage.session, first.usage.long
-            bars = (
-                TrayBar(s.percent, level_of(s.percent)) if s.available else None,
-                TrayBar(lw.percent, level_of(lw.percent)) if lw.available else None,
-            )
+
+            def bar(w: Window) -> TrayBar | None:
+                if not w.available:
+                    return None
+                percent = 0.0 if reset_passed(w, now) else w.percent
+                return TrayBar(percent, level_of(percent))
+
+            bars = (bar(first.usage.session), bar(first.usage.long))
 
     active = [states[p[0]] for p in providers if p[0] in states]
     dot: Dot | None = None
