@@ -4,6 +4,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- Bug report and feature request forms for GitHub issues (the bug form asks for the app and Windows versions, how Claude Desktop is installed, and the diagnostics output), `SECURITY.md` for reporting security problems privately, and `CONTRIBUTING.md` with setup steps and the project rules
+
 ### Fixed
 
 - After waking the computer from sleep, the widget could keep showing last night's numbers (for example a red "5h 100% · soon") for several minutes without marking them as old. The app now refreshes as soon as Windows reports it has woken up, and the polling thread checks the clock at least once a minute in case that message never arrives. A period whose reset time has already passed now shows an empty bar and "Reset · updating" until fresh data comes in, instead of the old percentage

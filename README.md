@@ -80,7 +80,7 @@ Location: `%APPDATA%\MyUsageMonitor\settings.json`. Prefer the Settings window (
 
 ## Troubleshooting
 
-Run diagnostics first: Settings → Advanced → "Run diagnostics", or run `diagnose-vX.Y.Z.exe` directly. It goes through each token source, the decryption and the API response step by step, and the final summary (結論) says where it got stuck. **The output never contains full tokens, so you can paste it into an issue.** The diagnostics output is in Traditional Chinese for now.
+Run diagnostics first: Settings → Advanced → "Run diagnostics", or run `diagnose-vX.Y.Z.exe` directly. It goes through each token source, the decryption and the API response step by step, and the final summary (結論) says where it got stuck. **The output never contains full tokens, so you can paste it into a [bug report](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose).** The diagnostics output is in Traditional Chinese for now. Security problems: please report privately, see [SECURITY.md](SECURITY.md).
 
 | Symptom | Likely cause and fix |
 | --- | --- |
@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File scripts\check.ps1   # must pass before 
 powershell -ExecutionPolicy Bypass -File scripts\build.ps1   # build into dist\
 ```
 
-Architecture, rules and specs are in [CLAUDE.md](CLAUDE.md), key decisions in [docs/decisions/](docs/decisions/), and the change log in [CHANGELOG.md](CHANGELOG.md). Code comments and log messages are in Traditional Chinese.
+Architecture, rules and specs are in [CLAUDE.md](CLAUDE.md), key decisions in [docs/decisions/](docs/decisions/), and the change log in [CHANGELOG.md](CHANGELOG.md). Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Code comments and log messages are in Traditional Chinese.
 
 ### Releasing a new version
 

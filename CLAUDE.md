@@ -302,10 +302,13 @@ windows_Claude-usage-monitor/
 ├─ README.md                   English
 ├─ README.zh-TW.md             Traditional Chinese (each README links to the other at the top)
 ├─ LICENSE                     MIT
+├─ SECURITY.md                 how to report security problems privately
+├─ CONTRIBUTING.md             setup, checks and rules for contributors (points to this file)
 ├─ pyproject.toml              dependencies; ruff, pyright, pytest, import-linter config
 ├─ .pre-commit-config.yaml
 ├─ .github/workflows/ci.yml    ubuntu: ruff, pyright, lint-imports, pure-logic tests; windows: windows_only and pytest-qt tests
 ├─ .github/workflows/release.yml  on a pushed vX.Y.Z tag: build and create a GitHub Release (§3.9)
+├─ .github/ISSUE_TEMPLATE/     bug report and feature request forms; blank issues off, security link to SECURITY.md
 ├─ scripts/
 │  ├─ check.ps1                runs every check (must pass before finishing any work)
 │  ├─ build.ps1                PyInstaller build (+ generates THIRD_PARTY_LICENSES.txt)
