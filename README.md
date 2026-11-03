@@ -36,8 +36,7 @@ On first run, Windows SmartScreen may say "Windows protected your PC" (the exe i
 
 When a new version is out, a blue dot appears at the bottom right of the tray icon, the tray menu gets a "New version vX.Y.Z →" item at the top, and you get one notification (also shown in Settings → About). The app never downloads or installs anything itself; clicking only opens the Release page.
 
-Quit the old version (tray right-click → "Quit") → download the new exe → run it. Your settings carry over.
-If "Start with Windows" is on, turn it off and on again in the new version's Settings so it points to the new exe.
+Quit the old version (tray right-click → "Quit") → download the new exe → run it. Your settings carry over, and "Start with Windows" switches to the new exe automatically.
 
 ### Uninstall
 

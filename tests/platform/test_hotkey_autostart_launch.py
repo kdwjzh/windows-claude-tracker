@@ -52,6 +52,41 @@ def test_autostart_command_frozen() -> None:
     )
 
 
+class _Writes:
+    def __init__(self) -> None:
+        self.count = 0
+
+    def __call__(self) -> None:
+        self.count += 1
+
+
+def test_autostart_sync_rewrites_old_exe() -> None:
+    write = _Writes()
+    old = r'"C:\Apps\ClaudeUsageTracker-v1.2.0.exe"'
+    assert autostart.sync_command(read=lambda: old, write=write) is True
+    assert write.count == 1
+
+
+def test_autostart_sync_keeps_current_command() -> None:
+    write = _Writes()
+    current = autostart.command().upper()  # Windows 路徑不分大小寫
+    assert autostart.sync_command(read=lambda: current, write=write) is False
+    assert write.count == 0
+
+
+def test_autostart_sync_ignores_disabled() -> None:
+    write = _Writes()
+    assert autostart.sync_command(read=lambda: None, write=write) is False
+    assert write.count == 0
+
+
+def test_autostart_sync_write_failure_is_logged_not_raised() -> None:
+    def fail() -> None:
+        raise OSError("denied")
+
+    assert autostart.sync_command(read=lambda: '"C:\\old.exe"', write=fail) is False
+
+
 def test_diagnose_command() -> None:
     assert launch.diagnose_command(r"C:\venv\Scripts\pythonw.exe", frozen=False) == [
         r"C:\venv\Scripts\python.exe",

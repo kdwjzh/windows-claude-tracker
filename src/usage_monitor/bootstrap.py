@@ -12,7 +12,7 @@ from types import TracebackType
 
 from usage_monitor import __version__
 from usage_monitor.core.interfaces import Provider
-from usage_monitor.platform import app_identity, paths
+from usage_monitor.platform import app_identity, autostart, paths
 from usage_monitor.platform.cli_refresh import ClaudeCliRefresher
 from usage_monitor.platform.clock import SystemClock
 from usage_monitor.platform.http import RequestsTransport, inject_truststore
@@ -70,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     threading.excepthook = _log_thread_exception
     log.info("啟動 v%s", __version__)
     app_identity.report()
+    autostart.sync_command()  # 換新版 exe 後，開機啟動跟著指向新的檔案
     inject_truststore()
 
     settings_store = SettingsStore(paths.settings_file())
