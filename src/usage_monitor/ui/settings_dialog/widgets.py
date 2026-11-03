@@ -118,10 +118,12 @@ class SettingCard(QWidget):
         texts.addWidget(self.title)
         self.subtitle = QLabel(subtitle or "")
         self.subtitle.setObjectName("cardSubtitle")
-        self.subtitle.setVisible(bool(subtitle))
         self.subtitle.setWordWrap(True)
         texts.addWidget(self.subtitle)
         lay.addLayout(texts, 1)
+        # 放進卡片之後才設定顯示：沒有父元件的 QLabel 一旦 setVisible(True)，
+        # Qt 會把它當成獨立視窗開出來（開啟儀表板時會閃出一堆小視窗）
+        self.subtitle.setVisible(bool(subtitle))
         if control is not None:
             lay.addWidget(control, 0, Qt.AlignmentFlag.AlignVCenter)
         self.setMinimumHeight(64)

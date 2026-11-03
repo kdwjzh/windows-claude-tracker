@@ -14,8 +14,8 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QLabel
+from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtWidgets import QLabel, QWidget
 
 from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
@@ -330,3 +330,39 @@ def test_menus_toggle_monitored_ai(setup) -> None:
     assert store.current.providers == ("codex",)
     tray_menu.aboutToShow.emit()
     assert [a.isChecked() for a in _providers_submenu(tray_menu).actions()] == [False, True]
+
+
+class _WindowShows(QObject):
+    """記下被顯示成獨立視窗（頂層）的元件類別名稱。"""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.shown: list[str] = []
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802 - Qt 的命名
+        if event.type() == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow():
+            self.shown.append(type(obj).__name__)
+        return False
+
+
+def test_opening_dashboard_shows_only_one_window(qapp, tmp_path: Path) -> None:
+    """2026-11-04 bug：第一次開啟儀表板與切換語言時，設定卡片的說明文字會先各自閃出一個小視窗。"""
+    store = SettingsStore(tmp_path / "settings.json")
+    store.load()
+    store.update(lambda s: replace(s, language="zh-TW"))
+    controller = Controller(
+        qapp, store, StateStore(), CATALOG, FakeClock(NOW),
+        refresh=lambda: None, log_file=tmp_path / "monitor.log", on_quit=lambda: None,
+    )  # fmt: skip
+    controller.start()
+    watcher = _WindowShows()
+    qapp.installEventFilter(watcher)
+    try:
+        controller.open_settings()
+        assert watcher.shown == ["SettingsDialog"]
+        watcher.shown.clear()
+        store.update(lambda s: replace(s, language="en"))  # 切換語言會重建儀表板
+        assert watcher.shown == ["SettingsDialog"]
+    finally:
+        qapp.removeEventFilter(watcher)
+        controller.shutdown()

@@ -2,6 +2,12 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Opening the dashboard for the first time (and switching the language, which rebuilds it) briefly flashed a series of small windows before the dashboard appeared: each settings card's description label was shown before it was placed in its card, so Qt opened it as a separate top-level window. The label is now shown only after it's in the card; opening the dashboard also got faster (about 1 s → 0.2 s)
+
 ## [1.3.0] - 2026-11-02
 
 ### Changed
