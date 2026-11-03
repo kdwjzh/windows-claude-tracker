@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- The widget now hides when a video goes full screen in a maximized browser window (YouTube, Netflix, Disney+, etc.). Full screen is now decided by the window having no title bar and covering the whole screen, instead of excluding every maximized window; maximized windows with a title bar still don't count
 - Opening the dashboard for the first time (and switching the language, which rebuilds it) briefly flashed a series of small windows before the dashboard appeared: each settings card's description label was shown before it was placed in its card, so Qt opened it as a separate top-level window. The label is now shown only after it's in the card; opening the dashboard also got faster (about 1 s → 0.2 s)
 
 ## [1.3.0] - 2026-11-02

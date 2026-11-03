@@ -223,7 +223,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - After hovering 0.5 seconds, a detail card appears above the widget: service name, data source, each period's percentage and 「今天 20:20 重置（2時13分後）」/ "Resets today 20:20 (in 2h 13m)", last update time, and 「雙擊立即更新」/ "Double-click to refresh"
 - Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
 - While dragging, show a blue outline `#7fb3ff`; on release within 12 px of a work-area edge, snap to it (8 px from the edge after snapping)
-- Show/hide: tray left-click, the shortcut (`Ctrl+Alt+U` by default, changeable in Settings), or the context menu. Auto-hide in full screen (a maximized window isn't full screen); a manual hide is never undone by leaving full screen
+- Show/hide: tray left-click, the shortcut (`Ctrl+Alt+U` by default, changeable in Settings), or the context menu. Auto-hide in full screen: a maximized window **with a title bar** isn't full screen (even when its rectangle covers the screen, for example with an auto-hiding taskbar), while a window **without a title bar** that covers the whole screen is, maximized or not — such as a video in full screen in a maximized browser (`platform/fullscreen.is_fullscreen_window`, revised 2026-11-04); a manual hide is never undone by leaving full screen
 
 **Tray and notifications (artboard 4)**
 
