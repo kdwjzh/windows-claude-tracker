@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPaintEvent, QWheelEvent
 from PySide6.QtWidgets import (
     QAbstractButton,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -15,6 +16,17 @@ from PySide6.QtWidgets import (
 
 from usage_monitor.core.i18n import Lang, t
 from usage_monitor.ui.theme import DialogPalette
+
+
+class ComboBox(QComboBox):
+    """不吃滑鼠滾輪的下拉選單。
+
+    Qt 預設滑鼠停在上面捲動就會換選項，捲動設定頁時會不小心改到設定；
+    滾輪事件交回給外層的捲動區，要改選項請點開清單（或用鍵盤）。
+    """
+
+    def wheelEvent(self, e: QWheelEvent) -> None:  # noqa: N802 - Qt 的介面
+        e.ignore()
 
 
 class ToggleSwitch(QAbstractButton):

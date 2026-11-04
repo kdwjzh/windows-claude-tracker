@@ -15,7 +15,6 @@ from typing import Protocol
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
-    QComboBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -36,6 +35,7 @@ from usage_monitor.services.update_check import UpdateState, UpdateStatus
 from usage_monitor.ui import theme
 from usage_monitor.ui.settings_dialog.style import stylesheet
 from usage_monitor.ui.settings_dialog.widgets import (
+    ComboBox,
     HotkeyButton,
     LabeledSwitch,
     SettingCard,
@@ -153,7 +153,7 @@ class SettingsDialog(QWidget):
         page, lay = _page(t(lang, "nav_general"))
 
         lay.addWidget(section_label(t(lang, "section_update")))
-        self.interval = QComboBox()
+        self.interval = ComboBox()
         self.interval.currentIndexChanged.connect(self._on_interval)
         lay.addWidget(SettingCard(t(lang, "interval"), self.interval, t(lang, "interval_hint")))
         self.autostart = self._switch(self._host.set_autostart)
@@ -200,7 +200,7 @@ class SettingsDialog(QWidget):
         self.hotkey_card = SettingCard(t(lang, "hotkey"), hotkey_box)
         lay.addWidget(self.hotkey_card)
 
-        self.theme = QComboBox()
+        self.theme = ComboBox()
         for _, key in THEME_CHOICES:
             self.theme.addItem(t(lang, key))
         self.theme.currentIndexChanged.connect(
@@ -208,7 +208,7 @@ class SettingsDialog(QWidget):
         )
         lay.addWidget(SettingCard(t(lang, "theme"), self.theme))
 
-        self.language = QComboBox()
+        self.language = ComboBox()
         for value in LANGUAGE_CHOICES:
             label = t(lang, "language_system") if value == "system" else LANGUAGE_NAMES[Lang(value)]
             self.language.addItem(label, value)
@@ -222,7 +222,7 @@ class SettingsDialog(QWidget):
             card = SettingCard(name, switch, " ")
             self.service_cards[pid] = (card, switch)
             lay.addWidget(card)
-        self.tray_icon = QComboBox()
+        self.tray_icon = ComboBox()
         for pid, name in self._host.catalog:
             self.tray_icon.addItem(name, pid)
         self.tray_icon.addItem(t(lang, "tray_icon_highest"), TRAY_HIGHEST)

@@ -14,8 +14,9 @@ import pytest
 
 pytest.importorskip("pytestqt")
 
-from PySide6.QtCore import QEvent, QObject, Qt
-from PySide6.QtWidgets import QLabel, QWidget
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
+from PySide6.QtGui import QWheelEvent
+from PySide6.QtWidgets import QApplication, QLabel, QWidget
 
 from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
@@ -142,6 +143,31 @@ def test_tray_icon_choice_is_saved(setup) -> None:
     assert dialog.tray_icon.currentData() == "claude"
     dialog.tray_icon.setCurrentIndex(dialog.tray_icon.findData("highest"))
     assert store.current.tray_icon == "highest"
+
+
+def _wheel(widget: QWidget, notches: int) -> bool:
+    """在元件中央送出滑鼠滾輪事件；回傳事件是否被元件接受（沒接受就會往上交給捲動區）。"""
+    center = QPointF(widget.rect().center())
+    event = QWheelEvent(
+        center, QPointF(widget.mapToGlobal(center.toPoint())), QPoint(), QPoint(0, 120 * notches),
+        Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier, Qt.ScrollPhase.NoScrollPhase,
+        False,
+    )  # fmt: skip
+    QApplication.sendEvent(widget, event)
+    return event.isAccepted()
+
+
+def test_mouse_wheel_does_not_change_dropdowns(setup) -> None:
+    """2026-11-04：滑鼠停在下拉選單上捲動頁面時，會不小心切換主題、語言等設定。"""
+    controller, store, _ = setup
+    dialog = dialog_of(controller)
+    before = store.current
+    for combo in (dialog.interval, dialog.theme, dialog.language, dialog.tray_icon):
+        index = combo.currentIndex()
+        for notches in (-1, 1):
+            assert _wheel(combo, notches) is False  # 交給捲動區捲動頁面
+        assert combo.currentIndex() == index
+    assert store.current == before
 
 
 def test_service_toggle_enables_codex_column(setup) -> None:

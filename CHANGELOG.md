@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- Scrolling the dashboard with the mouse wheel changed a drop-down (refresh interval, theme, language, tray icon) whenever the pointer passed over it, because Qt's drop-downs react to the wheel on hover. They now ignore the wheel and the page scrolls instead; click a drop-down (or use the keyboard) to change it
 - After waking the computer from sleep, the widget could keep showing last night's numbers (for example a red "5h 100% · soon") for several minutes without marking them as old. The app now refreshes as soon as Windows reports it has woken up, and the polling thread checks the clock at least once a minute in case that message never arrives. A period whose reset time has already passed now shows an empty bar and "Reset · updating" until fresh data comes in, instead of the old percentage
 - "Start with Windows" silently kept starting the old version after an update: the exe name carries the version number, but the registry entry still pointed to the old file while Settings showed the option as on. At startup the app now rewrites the entry to the running exe when it's on and points elsewhere, so there's no need to turn it off and on again after updating
 - The widget now hides when a video goes full screen in a maximized browser window (YouTube, Netflix, Disney+, etc.). Full screen is now decided by the window having no title bar and covering the whole screen, instead of excluding every maximized window; maximized windows with a title bar still don't count
