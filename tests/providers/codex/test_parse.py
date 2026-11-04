@@ -113,3 +113,29 @@ def test_no_windows_is_transient(body: object) -> None:
 def test_negative_reset_after_ignored() -> None:
     body = {"rate_limit": {"primary_window": {"used_percent": 5, "reset_after_seconds": -1}}}
     assert parse_usage(body, NOW).session.resets_at is None
+
+
+# ---------------------------------------------------------------- API 格式變動（ROADMAP 第 14 項）
+
+
+def test_free_plan_2026_11_response(caplog: pytest.LogCaptureFixture) -> None:
+    """2026-11 免費方案的實際回應（已去識別化）：只有 30 天週期，沒有雜訊 log。"""
+    caplog.set_level("DEBUG", logger="usage_monitor.providers.codex.parse")
+    u = parse_usage(fixture("usage_free_30d_only.json"), NOW)
+    assert not u.session.available and u.session.label == "5h"
+    assert (u.long.percent, u.long.label) == (99, "30d")
+    assert "不認得" not in caplog.text
+
+
+def test_unknown_fields_are_logged(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("DEBUG", logger="usage_monitor.providers.codex.parse")
+    body = fixture("usage_free_30d_only.json")
+    assert isinstance(body, dict)
+    body["weekly_bonus"] = {"used_percent": 1}
+    body["rate_limit"]["tertiary_window"] = {"used_percent": 2}
+    body["rate_limit"]["primary_window"]["burst_percent"] = 3
+    parse_usage(body, NOW)
+    assert (
+        "不認得的欄位：weekly_bonus, rate_limit.tertiary_window, primary_window.burst_percent"
+        in caplog.text
+    )

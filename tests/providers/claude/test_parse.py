@@ -140,3 +140,31 @@ def test_headers_without_windows_raise_transient() -> None:
     with pytest.raises(PollError) as info:
         parse_headers(headers(status="allowed").header, NOW)
     assert info.value.kind is ErrKind.TRANSIENT
+
+
+# ---------------------------------------------------------------- API 格式變動（ROADMAP 第 14 項）
+
+
+def test_full_2026_11_response(caplog: pytest.LogCaptureFixture) -> None:
+    """2026-11 的實際回應（diagnose --dump-response 存下、已去識別化）：解析正確、沒有雜訊 log。"""
+    caplog.set_level("DEBUG", logger="usage_monitor.providers.claude.parse")
+    u = parse_usage(fixture("usage_full_2026_11.json"), NOW)
+    assert (u.session.percent, u.session.label) == (57.0, "5h")
+    assert (u.long.percent, u.long.label) == (65.0, "7d")
+    assert "不認得" not in caplog.text  # 一堆值是 null 的代號欄位不算
+
+
+def test_unknown_fields_and_kinds_are_logged(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("DEBUG", logger="usage_monitor.providers.claude.parse")
+    body = fixture("usage_full_2026_11.json")
+    assert isinstance(body, dict)
+    body["new_window"] = {"utilization": 3}
+    body["another_codename"] = None  # null 不記
+    body["five_hour"]["burst"] = 1
+    body["limits"].append({"kind": "daily_all", "scope": None, "percent": 5, "colour": "red"})
+    u = parse_usage(body, NOW)
+    assert u.session.percent == 57.0  # 照常解析
+    assert "不認得的欄位：five_hour.burst, limits[].colour, new_window" in caplog.text
+    assert "不認得的 kind：daily_all" in caplog.text
+    assert "another_codename" not in caplog.text
+    assert "utilization" not in caplog.text.split("不認得的欄位：")[1].split("\n")[0]

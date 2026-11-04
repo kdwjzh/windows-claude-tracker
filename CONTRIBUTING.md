@@ -31,6 +31,7 @@ Only one copy of the app runs at a time: quit any installed version first (tray 
 - **Keep the layers apart**: `core` → `providers` / `platform` → `services` → `ui`, and a lower layer never imports a higher one. import-linter enforces this. A new service goes in its own `providers/<name>/` folder plus one line in `providers/registry.py`.
 - **Bug fixes start with a failing test** that reproduces the bug; the test stays.
 - **Never commit tokens**, personal paths or account details, including in test fixtures. The pre-commit hook runs gitleaks.
+- A new API response shape? `python -m usage_monitor.diagnose --dump-response claude` (or `codex`) saves an anonymized copy you can add under `tests/fixtures/`; still read it before committing.
 - **UI text goes through `core/i18n.py`** in both Traditional Chinese and English.
 - One change per pull request, with a line in `CHANGELOG.md` under `[Unreleased]`.
 

@@ -6,15 +6,43 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 
 from usage_monitor.core.errors import ErrKind, ErrReason, PollError
-from usage_monitor.core.json_access import as_dict, as_float, parse_unix
+from usage_monitor.core.json_access import as_dict, as_float, parse_unix, unknown_keys
 from usage_monitor.core.models import Usage, Window
 from usage_monitor.core.windows import is_long_window, label_for_seconds
 
 DEFAULT_SESSION_LABEL = "5h"
 DEFAULT_LONG_LABEL = "7d"
+
+log = logging.getLogger(__name__)
+
+# 已知的欄位（2026-11 的實際回應）：不認得、值又不是 null 的欄位記一行 debug log（只記名稱）
+KNOWN_KEYS = frozenset({
+    "user_id", "account_id", "email", "plan_type", "rate_limit", "code_review_rate_limit",
+    "additional_rate_limits", "model_usage", "credits", "spend_control",
+    "rate_limit_reached_type", "promo", "rate_limit_reset_credits",
+})  # fmt: skip
+KNOWN_RATE_LIMIT_KEYS = frozenset(
+    {"allowed", "limit_reached", "primary_window", "secondary_window"}
+)
+KNOWN_WINDOW_KEYS = frozenset(
+    {"used_percent", "limit_window_seconds", "reset_after_seconds", "reset_at"}
+)
+
+
+def log_unknown(data: dict[str, object] | None) -> None:
+    """不認得的欄位記一行 debug log（ROADMAP 第 14 項）。"""
+    rate_limit = as_dict((data or {}).get("rate_limit"))
+    found = unknown_keys(data, KNOWN_KEYS)
+    found += [f"rate_limit.{k}" for k in unknown_keys(rate_limit, KNOWN_RATE_LIMIT_KEYS)]
+    for name in ("primary_window", "secondary_window"):
+        window = as_dict((rate_limit or {}).get(name))
+        found += [f"{name}.{k}" for k in unknown_keys(window, KNOWN_WINDOW_KEYS)]
+    if found:
+        log.debug("Codex 用量 API 回應有不認得的欄位：%s", ", ".join(found))
 
 
 def _window(raw: object, fetched_at: datetime) -> tuple[Window, float | None] | None:
@@ -34,6 +62,7 @@ def _window(raw: object, fetched_at: datetime) -> tuple[Window, float | None] | 
 
 
 def parse_usage(body: object, fetched_at: datetime) -> Usage:
+    log_unknown(as_dict(body))
     rate_limit = as_dict((as_dict(body) or {}).get("rate_limit"))
     if rate_limit is None:
         raise PollError(

@@ -59,3 +59,11 @@ def parse_unix_ms(value: object) -> datetime | None:
     """Unix 毫秒 → UTC aware。"""
     ms = as_float(value)
     return parse_unix(ms / 1000) if ms is not None else None
+
+
+def unknown_keys(data: dict[str, object] | None, known: frozenset[str]) -> list[str]:
+    """值不是 null、而且不在 `known` 裡的欄位名稱（排序過）；給「API 格式變了」的 debug log 用。
+
+    值是 null 的欄位不算：API 常常多出一堆代號欄位但都是 null，列出來只是雜訊。
+    """
+    return sorted(k for k, v in (data or {}).items() if v is not None and k not in known)

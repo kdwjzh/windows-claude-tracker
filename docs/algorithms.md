@@ -79,6 +79,7 @@ anthropic-beta: oauth-2025-04-20
 - If either is null or has no `utilization`, look in `limits[]` for the item whose `scope` is null and whose `kind` is `session` (5h) / `weekly_all` (7d); the percentage is `percent`, falling back to `utilization`
 - Neither window present → `TRANSIENT` / `BAD_RESPONSE`; if only one is present, the other is marked "no data" (`available=False`)
 - A response that isn't JSON → `TRANSIENT` / `BAD_RESPONSE`
+- Format changes (added 2026-11-04): `KNOWN_KEYS`, `KNOWN_BUCKET_KEYS`, `KNOWN_LIMIT_KEYS` and `KNOWN_LIMIT_KINDS` in `parse.py` list the fields seen in the 2026-11 response (`tests/fixtures/claude/usage_full_2026_11.json`). Fields outside them whose value isn't null, and unknown `limits[].kind` values, are logged at debug level (names only, never values). Null fields are ignored: the response carries many null code-named fields that come and go
 
 ### 4.1 Messages API fallback
 
@@ -135,6 +136,7 @@ Each of `rate_limit.primary_window` / `secondary_window` has:
 - Row labels come from the window length (`core/windows.py`): a day or more → `round(seconds / 86400)` days (604800 → `7d`, 2592000 → `30d`), otherwise `round(seconds / 3600)` hours (18000 → `5h`); `5h` / `7d` when it can't be determined
 - Measured: some accounts have only a single 30-day window (`limit_window_seconds = 2592000`) and no 5h window; an unreported period shows an empty bar and 0%
 - No `rate_limit`, or neither window present → `TRANSIENT` / `BAD_RESPONSE`
+- Format changes (added 2026-11-04): unknown non-null fields at the top level, in `rate_limit` and in each window are logged at debug level (names only), against the 2026-11 response in `tests/fixtures/codex/usage_free_30d_only.json`
 
 ## 6. Error classification and scheduling
 

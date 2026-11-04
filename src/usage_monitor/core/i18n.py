@@ -202,6 +202,9 @@ _ZH_TW: dict[str, str] = {
     "diag_arg_no_api": "只檢查 token 來源，不呼叫 API",
     "diag_arg_debug": "顯示 debug log（不含 token）",
     "diag_arg_lang": "輸出語言（預設跟隨設定檔的 language）",
+    "diag_arg_dump": "呼叫一次用量 API，把去識別化的回應存成 JSON 檔（可當測試 fixture）",
+    "diag_dump_saved": "已存成 {path}（已去識別化，送出前仍請自己看過一次）",
+    "diag_dump_none": "沒有收到可以存的回應",
     "diag_mask_short": "***（{n} 字元）",
     "diag_no_expiry": "沒有到期時間",
     "diag_expired": "{time}（已過期 {ago}）",
@@ -437,6 +440,12 @@ _EN: dict[str, str] = {
     "diag_arg_no_api": "only check the token sources, don't call the API",
     "diag_arg_debug": "show debug logs (never contain tokens)",
     "diag_arg_lang": "output language (default: the language in the settings file)",
+    "diag_arg_dump": (
+        "call the usage API once and save the anonymized response as a JSON file "
+        "(usable as a test fixture)"
+    ),
+    "diag_dump_saved": "Saved to {path} (anonymized; still look it over before sharing it)",
+    "diag_dump_none": "No response that could be saved",
     "diag_mask_short": "*** ({n} chars)",
     "diag_no_expiry": "no expiry time",
     "diag_expired": "{time} (expired {ago})",

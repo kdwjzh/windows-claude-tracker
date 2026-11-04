@@ -399,7 +399,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ diagnose_window.py    diagnostics window (runs the injected report function on a background thread)
 │  │  └─ settings_dialog/      Settings window (dashboard); charts.py + usage_page.py draw the Usage page
 │  │
-│  └─ diagnose.py              diagnostics checks: report_text() for the app window, main() for python -m
+│  └─ diagnose.py              diagnostics checks: report_text() for the app window, main() for python -m (+ --dump-response)
 └─ tests/
    ├─ fixtures/                anonymized API response samples (no tokens)
    ├─ fakes.py                 FakeTransport, FakeClock, FakeProvider, FakeCredentialSource
@@ -518,7 +518,7 @@ Scheduler (background thread)
 Rules:
 
 - **For every bug, first write a failing test that reproduces it, then fix it**; that test stays forever
-- When an API response shows a new shape, save it (anonymized) as a new fixture and add a test
+- When an API response shows a new shape, save it (anonymized) as a new fixture and add a test: `python -m usage_monitor.diagnose --dump-response claude|codex` calls the usage API once and writes the anonymized JSON (IDs, emails, names and token-like strings → `<redacted>`) to `usage_<service>_<time>.json` in the current folder; look it over before committing. Parsers log unknown non-null fields at debug level (`docs/algorithms.md` §4, §5); `tests/test_diagnose.py` checks every fixture is already anonymized
 - Coverage threshold: `core` + `providers` + `services` combined ≥ 90%; CI fails below it
 
 ### 5.4 Tools and checks

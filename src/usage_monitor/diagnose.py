@@ -15,17 +15,19 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from usage_monitor import __version__
 from usage_monitor.core import i18n, timefmt
 from usage_monitor.core.errors import ErrKind, PollError
 from usage_monitor.core.i18n import LANGUAGE_CHOICES, Lang, resolve_language, t
-from usage_monitor.core.interfaces import Clock, Provider
+from usage_monitor.core.interfaces import Clock, Provider, Response, Transport
 from usage_monitor.core.json_access import as_dict, as_str, parse_unix_ms
 from usage_monitor.core.models import Window
 from usage_monitor.platform import oscrypt, paths
@@ -364,6 +366,85 @@ def run(
     return api_ok if api_ok is not None else not report.problems
 
 
+# -------------------------------------------------------- --dump-response（ROADMAP 第 14 項）
+
+REDACTED = "<redacted>"
+_SENSITIVE_KEY = re.compile(r"id$|_id|uuid|email|user|account|org|name|token|secret|key", re.I)
+_SENSITIVE_VALUE = re.compile(
+    r"@|^sk-|^eyJ|^Bearer\s|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-|^[A-Za-z0-9_\-]{32,}$", re.I
+)
+
+
+def anonymize(value: object) -> object:
+    """去識別化：看起來像 ID、帳號、email、token 的字串換成 <redacted>；數字、布林、時間留著。
+
+    結構與欄位名稱不變，可以直接存成 tests/fixtures/ 的新檔案。
+    """
+    if isinstance(value, dict):
+        result: dict[str, object] = {}
+        for k, v in value.items():  # pyright: ignore[reportUnknownVariableType]
+            key = str(k)  # pyright: ignore[reportUnknownArgumentType]
+            sensitive = isinstance(v, str) and _SENSITIVE_KEY.search(key) is not None
+            result[key] = REDACTED if sensitive else anonymize(v)
+        return result
+    if isinstance(value, list):
+        return [anonymize(v) for v in value]  # pyright: ignore[reportUnknownVariableType]
+    if isinstance(value, str) and _SENSITIVE_VALUE.search(value):
+        return REDACTED
+    return value
+
+
+class RecordingTransport:
+    """包一層 Transport，記下每個回應（不改 Provider 介面就拿得到原始回應）。"""
+
+    def __init__(self, inner: Transport) -> None:
+        self._inner = inner
+        self.responses: list[Response] = []
+
+    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response:
+        resp = self._inner.get(url, headers, timeout)
+        self.responses.append(resp)
+        return resp
+
+    def post(self, url: str, headers: Mapping[str, str], json: Any, timeout: float) -> Response:
+        resp = self._inner.post(url, headers, json, timeout)
+        self.responses.append(resp)
+        return resp
+
+
+def dump_payload(responses: Sequence[Response]) -> object | None:
+    """最後一個 JSON 回應的去識別化內容；只有 header（Messages 備援）時改存 rate-limit header。"""
+    for resp in reversed(responses):
+        try:
+            body = resp.json()
+        except ValueError:
+            continue
+        return anonymize(body)
+    for resp in reversed(responses):
+        limits = {
+            k: v for k, v in resp.headers.items() if k.lower().startswith("anthropic-ratelimit")
+        }
+        if limits:
+            return {"headers": limits}
+    return None
+
+
+def dump_response(provider_id: str, out_dir: Path, clock: Clock, lang: Lang) -> int:
+    """呼叫一次用量 API，把去識別化的回應存成 JSON 檔（可直接當測試 fixture）。"""
+    recorder = RecordingTransport(RequestsTransport())
+    report = Report(lang=lang)
+    check_api(report, registry.create(provider_id, recorder, clock), clock)
+    payload = dump_payload(recorder.responses)
+    print(report.text())
+    if payload is None:
+        print(t(lang, "diag_dump_none"))
+        return 1
+    path = out_dir / f"usage_{provider_id}_{clock.now().astimezone():%Y%m%d-%H%M%S}.json"
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(t(lang, "diag_dump_saved", path=path))
+    return 0
+
+
 def report_text(lang: Lang, *, call_api: bool = True) -> str:
     """跑完整診斷並回傳文字（主程式的診斷視窗用；bootstrap 注入給 ui，ui 不直接 import 這裡）。
 
@@ -400,6 +481,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-api", action="store_true", help=t(lang, "diag_arg_no_api"))
     parser.add_argument("--debug", action="store_true", help=t(lang, "diag_arg_debug"))
     parser.add_argument("--lang", choices=[x.value for x in Lang], help=t(lang, "diag_arg_lang"))
+    parser.add_argument(
+        "--dump-response", choices=registry.available(), help=t(lang, "diag_arg_dump")
+    )
     args = parser.parse_args(argv)
     if args.lang:
         lang = Lang(args.lang)
@@ -413,6 +497,8 @@ def main(argv: list[str] | None = None) -> int:
     inject_truststore()
     clock = SystemClock()
 
+    if args.dump_response:
+        return dump_response(args.dump_response, Path.cwd(), clock, lang)
     if args.poll:
         return poll_only(registry.create(args.poll, RequestsTransport(), clock), clock, lang)
 

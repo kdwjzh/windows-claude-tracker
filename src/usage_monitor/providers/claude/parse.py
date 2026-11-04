@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import datetime
 
@@ -13,13 +14,32 @@ from usage_monitor.core.json_access import (
     as_str,
     parse_iso,
     parse_unix,
+    unknown_keys,
 )
 from usage_monitor.core.models import Usage, Window
+
+log = logging.getLogger(__name__)
 
 SESSION_LABEL = "5h"
 LONG_LABEL = "7d"
 
 _H = "anthropic-ratelimit-unified-"
+
+# 已知的欄位（2026-11 的實際回應）：出現不在這裡、值又不是 null 的欄位時記一行 debug log，
+# 方便發現 API 改版（只記欄位名稱，不記值）。沒用到的欄位（例如 spend）也列在這裡，避免雜訊。
+KNOWN_KEYS = frozenset({
+    "five_hour", "seven_day", "limits", "extra_usage", "spend", "seven_day_breakdown",
+    "member_dashboard_available", "seven_day_opus", "seven_day_sonnet", "seven_day_oauth_apps",
+    "seven_day_cowork", "weekly_scoped_shares",
+})  # fmt: skip
+KNOWN_BUCKET_KEYS = frozenset({
+    "utilization", "resets_at", "limit_dollars", "used_dollars", "remaining_dollars",
+    "locked_reason",
+})  # fmt: skip
+KNOWN_LIMIT_KEYS = frozenset(
+    {"kind", "group", "percent", "utilization", "severity", "resets_at", "scope", "is_active"}
+)
+KNOWN_LIMIT_KINDS = frozenset({"session", "weekly_all", "weekly_scoped"})
 
 
 def _bucket_window(bucket: object, label: str) -> Window | None:
@@ -45,11 +65,30 @@ def _limits_window(limits: object, kind: str, label: str) -> Window | None:
     return None
 
 
+def log_unknown(data: dict[str, object]) -> None:
+    """不認得的欄位與 limits[].kind 各記一行 debug log（ROADMAP 第 14 項）。"""
+    found = [*unknown_keys(data, KNOWN_KEYS)]
+    for name in ("five_hour", "seven_day"):
+        found += [f"{name}.{k}" for k in unknown_keys(as_dict(data.get(name)), KNOWN_BUCKET_KEYS)]
+    kinds: set[str] = set()
+    for raw in as_list(data.get("limits")) or []:
+        item = as_dict(raw)
+        found += [f"limits[].{k}" for k in unknown_keys(item, KNOWN_LIMIT_KEYS)]
+        kind = as_str((item or {}).get("kind"))
+        if kind and kind not in KNOWN_LIMIT_KINDS:
+            kinds.add(kind)
+    if found:
+        log.debug("用量 API 回應有不認得的欄位：%s", ", ".join(sorted(set(found))))
+    if kinds:
+        log.debug("用量 API 的 limits[] 有不認得的 kind：%s", ", ".join(sorted(kinds)))
+
+
 def parse_usage(body: object, fetched_at: datetime) -> Usage:
     """`/api/oauth/usage` 的 JSON → Usage；兩個視窗都沒有時丟 TRANSIENT。"""
     data = as_dict(body)
     if data is None:
         raise PollError(ErrKind.TRANSIENT, "用量 API 回應格式不認得", reason=ErrReason.BAD_RESPONSE)
+    log_unknown(data)
     limits = data.get("limits")
     session = _bucket_window(data.get("five_hour"), SESSION_LABEL) or _limits_window(
         limits, "session", SESSION_LABEL

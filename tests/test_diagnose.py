@@ -367,3 +367,82 @@ def test_report_text_for_the_app_window(
     assert "No Claude desktop app data found" in text
     assert "== Summary ==" in text
     assert capsys.readouterr().out == ""
+
+
+# -------------------------------------------------------- --dump-response（ROADMAP 第 14 項）
+
+
+def test_anonymize_hides_ids_emails_and_tokens() -> None:
+    body = {
+        "user_id": "user-abc",
+        "email": "someone@example.com",
+        "plan_type": "plus",
+        "nested": {"account_id": "acc_1", "note": "sk-ant-oat01-xyz", "id_list": ["a"]},
+        "rows": [{"display_name": "Opus", "percent": 68}],
+        "uuid_like": "123e4567-e89b-12d3-a456-426614174000",
+        "jwt": "eyJhbGciOi.payload.sig",
+        "resets_at": "2026-11-04T13:30:00+00:00",
+        "count": 3,
+        "flag": None,
+    }
+    assert diagnose.anonymize(body) == {
+        "user_id": "<redacted>",
+        "email": "<redacted>",
+        "plan_type": "plus",
+        "nested": {"account_id": "<redacted>", "note": "<redacted>", "id_list": ["a"]},
+        "rows": [{"display_name": "<redacted>", "percent": 68}],
+        "uuid_like": "<redacted>",
+        "jwt": "<redacted>",
+        "resets_at": "2026-11-04T13:30:00+00:00",
+        "count": 3,
+        "flag": None,
+    }
+
+
+def test_fixtures_are_anonymized() -> None:
+    """tests/fixtures/ 裡的回應再跑一次去識別化不會有任何變化（沒有漏掉的 ID 或 token）。"""
+    for path in (Path(__file__).parent / "fixtures").rglob("*.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        assert diagnose.anonymize(data) == data, path.name
+
+
+def test_dump_payload_prefers_json_then_ratelimit_headers() -> None:
+    from usage_monitor.core.interfaces import Response
+
+    json_resp = Response(200, {}, b'{"email": "a@b.c", "x": 1}')
+    headers_resp = Response(
+        429, {"anthropic-ratelimit-unified-5h-utilization": "0.4", "Server": "x"}, b"not json"
+    )
+    assert diagnose.dump_payload([json_resp, headers_resp]) == {"email": "<redacted>", "x": 1}
+    assert diagnose.dump_payload([headers_resp]) == {
+        "headers": {"anthropic-ratelimit-unified-5h-utilization": "0.4"}
+    }
+    assert diagnose.dump_payload([]) is None
+
+
+def test_dump_response_writes_fixture_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from fakes import FakeTransport
+    from usage_monitor.core.interfaces import Response
+
+    url = "https://example.test/usage"
+    fake = FakeTransport().add("GET", url, Response(200, {}, b'{"user_id": "u1", "percent": 5}'))
+    monkeypatch.setattr(diagnose, "RequestsTransport", lambda: fake)
+
+    class CallsApi(FakeProvider):
+        def __init__(self, transport) -> None:  # type: ignore[no-untyped-def]
+            super().__init__("codex", [USAGE])
+            self._transport = transport
+
+        def poll(self):  # type: ignore[no-untyped-def]
+            self._transport.get(url, {}, timeout=30)
+            return super().poll()
+
+    monkeypatch.setattr(
+        diagnose.registry, "create", lambda pid, transport, clock: CallsApi(transport)
+    )
+    assert diagnose.dump_response("codex", tmp_path, FakeClock(NOW), Lang.EN) == 0
+    (saved,) = tmp_path.glob("usage_codex_*.json")
+    assert json.loads(saved.read_text(encoding="utf-8")) == {"user_id": "<redacted>", "percent": 5}
+    assert "Saved to" in capsys.readouterr().out
