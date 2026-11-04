@@ -48,7 +48,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 | Single instance | Named mutex `Local\MyUsageMonitor_SingleInstance` | |
 | Show/hide shortcut | `Ctrl+Alt+U` by default, changeable in Settings; a failed registration is reported | Still usable if it clashes with other software |
 | Settings / log location | `%APPDATA%\MyUsageMonitor\settings.json`, `monitor.log` (RotatingFileHandler 1 MB × 2) | |
-| Usage history | `%APPDATA%\MyUsageMonitor\history.db` (stdlib `sqlite3`): one row per reported window per successful poll (service, `session`/`long`, label, `fetched_at`, percent, `resets_at`), kept 90 days; errors and stale states are not recorded; any database error is only logged; "Clear usage history" deletes the file (added 2026-11-04) | Groundwork for a usage page in the dashboard; only numbers and times, nothing that identifies the account |
+| Usage history | `%APPDATA%\MyUsageMonitor\history.db` (stdlib `sqlite3`): one row per reported window per successful poll (service, `session`/`long`, label, `fetched_at`, percent, `resets_at`), kept 90 days; errors and stale states are not recorded; any database error is only logged; "Clear usage history" deletes the file (added 2026-11-04) | Feeds the dashboard's Usage page; only numbers and times, nothing that identifies the account |
 | Settings format | JSON with `schema_version`; newer versions migrate old settings automatically | New fields don't break old settings files |
 | Quality tools | `ruff` (lint + format), `pyright`, `import-linter`, `pytest` (with `pytest-qt`, `pytest-cov`), `pre-commit` + `gitleaks` | See §5.4 |
 | Version control | **Public** GitHub repo `https://github.com/kdwjzh/windows-claude-tracker`, default branch `main`. Never commit tokens, personal paths, account details or screenshots; `.gitignore` excludes `settings.json`, `*.log`, `dist/`, `build/`; `gitleaks` in `pre-commit` scans for secrets before each commit | Anyone can see the full history |
@@ -241,7 +241,8 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 **Settings window (artboard 5)**
 
-- Windows 11 style, navigation on the left: General / Advanced / About
+- Windows 11 style, navigation on the left: Usage / General / Advanced / About (opens on Usage)
+- Usage (added 2026-11-04, not in the designs): one card per enabled service with the current numbers and reset times (same text as the hover card), a line chart of the short (5h) window over the past 7 days (the line breaks where two records are more than 2 hours apart; hidden when the service reports no short window and has no records), a bar chart of each long period's peak percentage (records grouped by `resets_at` rounded to the hour, last 8 periods, the running one labeled 「本期」/ "Now", bar colors from `core/levels.py`) and 「最近 N 個週期平均用到 X%」/ "Last N periods averaged X%" over the last 4 finished periods (shown only with at least 2); drawn with `QPainter`, never `QtCharts`; data from `history.db`, re-read when the dashboard refreshes
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": Claude / Codex / Highest usage)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
@@ -381,6 +382,7 @@ windows_Claude-usage-monitor/
 │  ├─ ui/                      ④ UI: reads only ViewModels, never touches providers directly
 │  │  ├─ theme.py              every color and size constant (the §3.7 values live only here)
 │  │  ├─ viewmodel.py          ProviderState → WidgetVM / TrayVM (pure functions, testable)
+│  │  ├─ usage_vm.py           usage history → Usage page charts and average (pure functions, testable)
 │  │  ├─ bridge.py             turns services callbacks into Qt signals delivered on the main thread
 │  │  ├─ widget/
 │  │  │  ├─ widget.py          the widget window (event handling)
@@ -391,7 +393,7 @@ windows_Claude-usage-monitor/
 │  │  │  ├─ tray.py
 │  │  │  └─ icon.py            draws the icon from TrayVM
 │  │  ├─ hovercard.py
-│  │  └─ settings_dialog/      Settings window
+│  │  └─ settings_dialog/      Settings window (dashboard); charts.py + usage_page.py draw the Usage page
 │  │
 │  └─ diagnose.py              diagnostics tool (console)
 └─ tests/

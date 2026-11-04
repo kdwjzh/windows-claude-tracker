@@ -21,7 +21,7 @@ from usage_monitor.core.i18n import Lang, resolve_language, t
 from usage_monitor.core.interfaces import Clock
 from usage_monitor.core.models import ProviderState
 from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power, topmost
-from usage_monitor.services.history import History
+from usage_monitor.services.history import History, Sample
 from usage_monitor.services.settings.schema import Settings, WidgetSettings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -326,6 +326,11 @@ class Controller(QObject):
     def clear_history(self) -> None:
         if self._history is not None:
             self._history.clear()
+        if self._dialog is not None:
+            self._dialog.refresh_usage()
+
+    def history_samples(self, provider_id: str, since: datetime) -> list[Sample]:
+        return [] if self._history is None else self._history.samples(provider_id, since)
 
     # ---------------------------------------------------------------- 更新檢查
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -22,6 +22,7 @@ from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
 from usage_monitor.core.i18n import Lang
 from usage_monitor.core.models import ProviderState, Usage, Window
+from usage_monitor.services.history import History
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
 from usage_monitor.ui import theme
@@ -86,6 +87,7 @@ def test_dialog_opens_once_and_close_only_hides(setup) -> None:
     assert dialog.isVisible()
     assert dialog.windowTitle() == "用量監控 · 設定"
     assert [dialog.nav.item(i).text() for i in range(dialog.nav.count())] == [
+        "用量",
         "一般",
         "進階",
         "關於",
@@ -209,7 +211,7 @@ def test_language_switch_applies_immediately(setup) -> None:
     """階段 6.5 驗收：切換語言後，小工具、選單、設定視窗立即變成該語言。"""
     controller, store, _ = setup
     old_dialog = dialog_of(controller)
-    old_dialog.nav.setCurrentRow(1)
+    old_dialog.nav.setCurrentRow(2)
     old_dialog.language.setCurrentIndex(old_dialog.language.findData("en"))
     assert store.current.language == "en"
     assert controller.lang is Lang.EN
@@ -217,9 +219,9 @@ def test_language_switch_applies_immediately(setup) -> None:
     dialog = dialog_of(controller)
     assert dialog is not old_dialog  # 依新語言重建
     assert dialog.isVisible()
-    assert dialog.nav.currentRow() == 1  # 留在原本的頁面
+    assert dialog.nav.currentRow() == 2  # 留在原本的頁面
     assert dialog.windowTitle() == "Usage Monitor · Settings"
-    assert dialog.nav.item(0).text() == "General"
+    assert dialog.nav.item(1).text() == "General"
     assert dialog.interval.currentText() == "Every 5 min"
     assert dialog.visible.label.text() == "On"
     assert controller.widget.vm.columns[0].note == "Loading…"
@@ -417,3 +419,54 @@ def test_opening_dashboard_shows_only_one_window(qapp, tmp_path: Path) -> None:
     finally:
         qapp.removeEventFilter(watcher)
         controller.shutdown()
+
+
+def test_usage_page_is_first_and_shows_history(qapp, tmp_path: Path) -> None:
+    """第 5b 項：「用量」頁是首頁，畫出歷史紀錄；只顯示啟用的服務；清除後圖表變空。"""
+    store = SettingsStore(tmp_path / "settings.json")
+    store.load()
+    store.update(lambda s: replace(s, language="zh-TW"))
+    clock = FakeClock(NOW)
+    history = History(tmp_path / "history.db", clock)
+    states = StateStore()
+    states.subscribe(history.record)
+    controller = Controller(
+        qapp, store, states, CATALOG, clock,
+        refresh=lambda: None, log_file=tmp_path / "monitor.log", on_quit=lambda: None,
+        history=history,
+    )  # fmt: skip
+    controller.start()
+    try:
+        week = NOW + timedelta(days=3)
+        for minutes, percent in ((0, 10), (5, 30)):
+            at = NOW - timedelta(hours=1) + timedelta(minutes=minutes)
+            reset = NOW + timedelta(hours=2)
+            usage = Usage(Window(True, percent, reset, "5h"), Window(True, 50, week, "7d"), at)
+            states.update(ProviderState("claude", usage, None, False, "cli"))
+        controller.open_settings()
+        dialog = dialog_of(controller)
+        assert dialog.nav.currentRow() == 0
+        panel = dialog.usage_panels["claude"]
+        assert panel.isVisible() and not dialog.usage_panels["codex"].isVisible()
+        assert panel.line_title.text() == "過去 7 天的 5 小時用量"
+        assert panel.line.isVisible()
+        assert panel.line.vm is not None and len(panel.line.vm.segments[0]) == 2
+        assert [b.label for b in panel.bars.bars] == ["本期"]
+        assert "5 小時  30%" in panel.current.text()
+        assert not panel.average.isVisible()
+        panel.grab()  # 畫得出來、不丟例外
+
+        controller.clear_history()
+        assert panel.bars.bars == ()
+        panel.grab()
+    finally:
+        controller.shutdown()
+
+
+def test_usage_page_without_services(setup) -> None:
+    controller, store, _ = setup
+    store.update(lambda s: replace(s, providers=[]))
+    dialog = dialog_of(controller)
+    dialog.refresh()
+    assert dialog.usage_none.isVisible()
+    assert not any(p.isVisible() for p in dialog.usage_panels.values())

@@ -1,4 +1,4 @@
-"""設定視窗（設計稿畫板 5）：左側導覽「一般／進階／關於」，改了立即生效、不需要「儲存」。
+"""儀表板（設計稿畫板 5）：左側導覽「用量／一般／進階／關於」，改了立即生效、不需要「儲存」。
 
 只透過 SettingsHost 讀寫設定與查詢狀態；外部（右鍵選單、快捷鍵）改了設定時，
 controller 會呼叫 refresh() 把畫面同步回來。
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -31,10 +31,12 @@ from usage_monitor import __version__
 from usage_monitor.core import app_info
 from usage_monitor.core.i18n import LANGUAGE_CHOICES, LANGUAGE_NAMES, Lang, t
 from usage_monitor.core.models import ProviderState
+from usage_monitor.services.history import RETENTION_DAYS, Sample
 from usage_monitor.services.settings.schema import MIN_OPACITY, Settings, WidgetSettings
 from usage_monitor.services.update_check import UpdateState, UpdateStatus
 from usage_monitor.ui import theme
 from usage_monitor.ui.settings_dialog.style import stylesheet
+from usage_monitor.ui.settings_dialog.usage_page import UsagePanel
 from usage_monitor.ui.settings_dialog.widgets import (
     ComboBox,
     HotkeyButton,
@@ -43,6 +45,7 @@ from usage_monitor.ui.settings_dialog.widgets import (
     section_label,
 )
 from usage_monitor.ui.theme import DialogPalette
+from usage_monitor.ui.usage_vm import build_service_usage
 from usage_monitor.ui.viewmodel import (
     TRAY_HIGHEST,
     ProviderInfo,
@@ -81,6 +84,7 @@ class SettingsHost(Protocol):
     def open_log_folder(self) -> None: ...
     def run_diagnose(self) -> None: ...
     def clear_history(self) -> None: ...
+    def history_samples(self, provider_id: str, since: datetime) -> Sequence[Sample]: ...
     @property
     def update_state(self) -> UpdateState | None: ...
     def check_updates_now(self) -> None: ...
@@ -120,8 +124,11 @@ class SettingsDialog(QWidget):
         self.nav = QListWidget()
         self.nav.setObjectName("nav")
         self.nav.setFixedWidth(190)
-        self.nav.addItems([t(self._lang, k) for k in ("nav_general", "nav_advanced", "nav_about")])
+        self.nav.addItems(
+            [t(self._lang, k) for k in ("nav_usage", "nav_general", "nav_advanced", "nav_about")]
+        )
         self.pages = QStackedWidget()
+        self.pages.addWidget(self._build_usage())
         self.pages.addWidget(self._build_general())
         self.pages.addWidget(self._build_advanced())
         self.pages.addWidget(self._build_about())
@@ -149,6 +156,20 @@ class SettingsDialog(QWidget):
         s.toggled.connect(on_toggle)
         self._switches.append(s)
         return s
+
+    def _build_usage(self) -> QWidget:
+        """用量（ROADMAP 第 5b 項）：每個監控對象一張卡片，資料來自用量歷史。"""
+        page, lay = _page(t(self._lang, "nav_usage"))
+        self.usage_none = QLabel(t(self._lang, "usage_none"))
+        self.usage_none.setObjectName("cardSubtitle")
+        lay.addWidget(self.usage_none)
+        self.usage_panels: dict[str, UsagePanel] = {}
+        for pid, name in self._host.catalog:
+            panel = UsagePanel(name, self._palette, self._lang)
+            self.usage_panels[pid] = panel
+            lay.addWidget(panel)
+        lay.addStretch(1)
+        return page
 
     def _build_general(self) -> QWidget:
         lang = self._lang
@@ -424,6 +445,21 @@ class SettingsDialog(QWidget):
         self.refresh_services()
         self.refresh_update()
 
+    def refresh_usage(self) -> None:
+        """重讀用量歷史並重畫「用量」頁（只顯示已啟用的服務）。"""
+        enabled = set(self._host.settings.providers)
+        now = self._host.now()
+        since = now - timedelta(days=RETENTION_DAYS)
+        for provider in self._host.catalog:
+            pid = provider[0]
+            panel = self.usage_panels[pid]
+            panel.setVisible(pid in enabled)
+            if pid in enabled:
+                samples = self._host.history_samples(pid, since)
+                state = self._host.provider_state(pid)
+                panel.set_vm(build_service_usage(provider, state, samples, now, lang=self._lang))
+        self.usage_none.setVisible(not enabled)
+
     def refresh_services(self) -> None:
         enabled = set(self._host.settings.providers)
         now = self._host.now()
@@ -436,12 +472,15 @@ class SettingsDialog(QWidget):
                 status.kind, "cardSubtitle"
             )
             card.set_subtitle(status.text, name)
+        self.refresh_usage()
 
     def apply_palette(self, palette: DialogPalette) -> None:
         self._palette = palette
         self.setStyleSheet(stylesheet(palette, self._lang))
         for s in self._switches:
             s.set_palette(palette)
+        for panel in self.usage_panels.values():
+            panel.set_palette(palette)
 
     # ---------------------------------------------------------------- 視窗
 

@@ -208,3 +208,11 @@ HOUSEKEEPING_MS = 2_000
 REPAINT_MS = 60_000
 """倒數文字重畫間隔（不打 API）。"""
 OPACITY_CHOICES = (1.0, 0.9, 0.75, 0.6)
+
+
+def dialog_levels(dialog: DialogPalette) -> Palette:
+    """儀表板圖表的綠／黃／紅：跟小工具同一組（淺色視窗用淺色主題的顏色）。"""
+    return LIGHT if dialog == DIALOG_LIGHT else DARK
+
+
+CHART_HEIGHT = 150
