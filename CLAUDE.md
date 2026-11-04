@@ -21,7 +21,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 - No taskbar embedding (the old stage 9 was dropped on 2026-10-31: the floating mode is enough, and embedding into the Windows 11 taskbar is unsupported and expensive to maintain). Build a **floating, draggable, hideable, always-on-top widget above the taskbar** (§3.7); see ADR 0005
 - No macOS/Linux support (but the pure logic in `core/` and `providers/` must be testable on Linux)
 - No theme engine (internationalization was added to scope on 2026-10-30, see §3.8)
-- No automatic download and install of new versions: **check and remind** only; users download from GitHub Releases themselves (§3.9)
+- No automatic background download: the update check only **checks and reminds**; the new version is downloaded only when the user presses "Update now" in About (§3.9, ADR 0007, revised 2026-11-05). No installer: the app stays a single portable exe
 - No other services such as Antigravity, Cursor, Grok, Copilot or OpenCode (but the architecture must allow adding one without changing existing code, see §4.3)
 - No multiple accounts (one Claude account + one Codex account)
 - No reading `~/.claude/.credentials.json` inside WSL; no per-model weekly limits (`weekly_scoped`) or extra usage (`spend`) (decided 2026-10-31)
@@ -56,7 +56,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 | App icon | `assets/app.ico` (a design file from the maintainer, 9 sizes from 16 to 256 px, **never generated or overwritten by code**): the exe icon (`--icon`) and the icon of every window and taskbar button (`QApplication.setWindowIcon()`); `__main__.py` sets the AppUserModelID `kdwjzh.WindowsClaudeTracker` first thing. The tray icon is still drawn dynamically from usage | When run with pythonw, the taskbar then doesn't show the Python icon or group it with other Python programs; the tray must reflect usage live |
 | License | This project: MIT (`LICENSE`); Releases include `THIRD_PARTY_LICENSES.txt` (the PySide6/Qt LGPL-3.0 notice and the licenses of other dependencies); the README and the About page carry an unofficial-tool disclaimer | The exe bundles Qt, and the LGPL requires shipping the license and how to get the source |
 | Releases | Push a `vX.Y.Z` tag → GitHub Actions (`windows-latest`) builds, tests and uploads the `.exe` files + SHA-256 to a GitHub Release | Every version is built in a clean environment; see §3.9 |
-| Update check | **On by default**: checks the latest GitHub Release at start and every 24 hours and reminds the user about new versions; can be turned off in Settings | See §3.9 |
+| Update check | **On by default**: checks the latest GitHub Release at start and every 24 hours and reminds the user about new versions; can be turned off in Settings. "Update now" in About downloads, verifies and switches to the new exe in place (ADR 0007) | See §3.9 |
 | Internationalization | Traditional Chinese + English; follows the Windows display language by default and can be switched in Settings; the whole UI switches together; translation tables are plain Python dicts (`core/i18n.py`) | See §3.8, ADR 0004 |
 | Documentation language | Project documents (README.md, CHANGELOG.md, CLAUDE.md, docs/) are in English, with README.zh-TW.md kept in sync with README.md; code comments and logs stay in Traditional Chinese; `diagnose` output follows the app language (§3.8) | Readable by international users and contributors; the app UI is already bilingual |
 
@@ -236,7 +236,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
   - **Gray dot** = stale data (temporarily unreachable)
 - Tooltip: one line per service, for example `Claude 5h 42% · 2時13分 | 7d 18% · 4天3時`, **at most 127 characters** in total
 - Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
-  - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens the Release page; the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
+  - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens Settings → About (revised 2026-11-05, ADR 0007); the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
 - Windows notifications appear only when action is needed, once per error type; buttons "Run diagnostics" and "Close". A temporary network outage never notifies
 - **Diagnostics window** (added 2026-11-04, not in the designs; `ui/diagnose_window.py`): opened by Settings → Advanced → "Run diagnostics" and by clicking a sign-in error notification. Shows the full `diagnose` report (monospace, scrollable, selectable, read only) with "Copy" and "Run again" buttons; the report runs on a background thread and comes back through a Qt signal, showing 「診斷中…」/ "Running diagnostics…" with the buttons disabled meanwhile; an exception shows a one-line error (details in the log) and never crashes the app; closing only hides it. `ui` can't import `diagnose` (same layer), so `bootstrap.py` injects `diagnose.report_text` into the `Controller`
 
@@ -247,7 +247,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": 「自動（最近使用的）」/ "Auto (most recently used)" / Claude / Codex)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
-- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with a "Download" link) / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
+- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
 
 **Window attributes**
@@ -288,7 +288,16 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - "Skip this version": stored in `update_check.skipped_version`; that version isn't reminded again, newer versions still are
 - Errors: 404 (no Release yet or the API is temporarily unavailable), 403/429 (API rate limit) and network errors → status "Can't check right now", **no notification and no error icon**, a debug log entry only
 - When a new version exists: an extra tray menu item + blue dot (§3.7); the Windows notification appears **once per new version**
-- "Download" opens the Release page (`html_url`); nothing is downloaded inside the app
+- "Download" opens the Release page (`html_url`)
+- The notification click and the tray item open Settings → About (revised 2026-11-05)
+
+**Update now (`services/self_update.py`, `platform/relaunch.py`, added 2026-11-05, ADR 0007)**
+
+- Shown only in the packaged exe (`sys.frozen`), when the release has `ClaudeUsageTracker-vX.Y.Z.exe` and `SHA256SUMS.txt` among its `assets[]`; their `browser_download_url` must start with `https://github.com/kdwjzh/windows-claude-tracker/releases/download/` (`app_info.DOWNLOAD_PREFIX`), otherwise they're ignored. Running from source only offers "Download"
+- On press (background thread): download `SHA256SUMS.txt`, then the exe; redirects are followed by hand (at most 5), only over https to `github.com` and `*.githubusercontent.com`; the shared `RequestsTransport` still never follows redirects. The SHA-256 is checked in memory before anything is written; then the file is written as `<name>.download` in the running exe's folder and renamed to `ClaudeUsageTracker-vX.Y.Z.exe`
+- Then (main thread): start the new exe with `--replaced <old exe path>` (`CREATE_NO_WINDOW`, `PYINSTALLER_RESET_ENVIRONMENT=1` so the new onefile exe unpacks on its own), and quit
+- The new exe waits up to 15 seconds for the single-instance mutex, then (background thread) deletes the old exe: only when it's in the same folder, isn't itself and its name matches `ClaudeUsageTracker*.exe`; retries for about 10 seconds while the file is locked, and only logs when it can't. `autostart.sync_command()` already points "Start with Windows" at the new exe
+- Any failure (no assets, network, HTTP error, checksum, unwritable folder, can't start the new exe) shows 「更新失敗，請按「前往下載」手動更新」/ "Update failed. Use Download to update by hand" and keeps the old version running; details go to the log
 - All UI text ("Version … is available", "You're up to date", "Can't check right now" and so on) goes through `t()` in `core/i18n.py`, in both languages (§3.8)
 
 ---
@@ -364,6 +373,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ oscrypt.py            DPAPI + AES-GCM
 │  │  ├─ http.py               RequestsTransport (implements Transport)
 │  │  ├─ autostart.py
+│  │  ├─ relaunch.py           "Update now" handover: start the new exe, delete the replaced one (ADR 0007)
 │  │  ├─ single_instance.py
 │  │  ├─ hotkey.py             RegisterHotKey
 │  │  ├─ fullscreen.py         whether the foreground window is full screen
@@ -375,6 +385,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ scheduler.py          independent polling, backoff and auth pause per service
 │  │  ├─ state_store.py        holds each service's ProviderState and notifies subscribers on change
 │  │  ├─ update_check.py       queries the latest GitHub Release (through Transport) and produces UpdateState
+│  │  ├─ self_update.py        "Update now": downloads the new exe and SHA256SUMS.txt, verifies, writes next to the old exe
 │  │  ├─ history.py            usage history in sqlite3 (subscribes to StateStore)
 │  │  ├─ settings/
 │  │  │  ├─ schema.py          Settings dataclass + defaults + validation
@@ -489,7 +500,7 @@ Scheduler (background thread)
 2. **Read only**: never modify any Claude or Codex file.
    The usage history (`history.db`) stores only service ids, percentages and times: never tokens, account ids or anything else.
 3. **Never use the refresh token**.
-4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. The update check connects only to `api.github.com` and sends no token, account or usage data.
+4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
 
 ### 5.2 Stability
 

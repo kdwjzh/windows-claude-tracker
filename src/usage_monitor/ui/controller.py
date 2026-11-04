@@ -7,12 +7,22 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import QAbstractNativeEventFilter, QLocale, QObject, QPoint, QRect, Qt, QTimer
+from PySide6.QtCore import (
+    QAbstractNativeEventFilter,
+    QLocale,
+    QObject,
+    QPoint,
+    QRect,
+    Qt,
+    QTimer,
+    Signal,
+)
 from PySide6.QtGui import QGuiApplication, QScreen
 from PySide6.QtWidgets import QApplication
 
@@ -20,8 +30,9 @@ from usage_monitor.core import app_info
 from usage_monitor.core.i18n import Lang, resolve_language, t
 from usage_monitor.core.interfaces import Clock
 from usage_monitor.core.models import ProviderState
-from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power, topmost
+from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power, relaunch, topmost
 from usage_monitor.services.history import History, Sample
+from usage_monitor.services.self_update import InstallError, InstallStatus
 from usage_monitor.services.settings.schema import Settings, WidgetSettings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -48,6 +59,10 @@ from usage_monitor.ui.widget.widget import UsageWidget
 log = logging.getLogger(__name__)
 
 HOTKEY_ID = 0x5531
+ABOUT_PAGE = 3
+
+DownloadUpdate = Callable[[UpdateState, Path], Path]
+"""下載並核對新版 exe 到指定資料夾，回傳新檔路徑；失敗丟 InstallError（bootstrap 注入）。"""
 
 
 class _NativeFilter(QAbstractNativeEventFilter):
@@ -96,6 +111,9 @@ def screen_infos() -> list[placement.ScreenInfo]:
 
 
 class Controller(QObject):
+    install_finished = Signal(object)
+    """「立即更新」背景下載結束：新 exe 的 Path，失敗是 None（queued 送回主執行緒）。"""
+
     def __init__(
         self,
         app: QApplication,
@@ -111,6 +129,7 @@ class Controller(QObject):
         updates: UpdateChecker | None = None,
         history: History | None = None,
         diagnose: RunDiagnostics | None = None,
+        download_update: DownloadUpdate | None = None,
     ) -> None:
         """`catalog`：所有可用的服務；實際顯示哪些依設定的 providers 決定。"""
         super().__init__()
@@ -128,8 +147,10 @@ class Controller(QObject):
         self._diagnose = diagnose
         """bootstrap 注入的「執行診斷並回傳文字」（ui 不能直接 import diagnose）。"""
         self._diagnose_window: DiagnoseWindow | None = None
+        self._download_update = download_update
+        self._install_status = InstallStatus.IDLE
         self._on_notification_click: Callable[[], None] = self.run_diagnose
-        """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開 Release 頁面。"""
+        """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開「關於」頁。"""
         self._clock = clock
         self._refresh = refresh
         self._log_file = log_file
@@ -150,6 +171,7 @@ class Controller(QObject):
 
         self._bridge = Bridge(states, settings_store, updates)
         self._bridge.update_changed.connect(self._on_update)
+        self.install_finished.connect(self._on_install_finished)
         self._bridge.state_changed.connect(self._on_state)
         self._bridge.settings_changed.connect(self._on_settings)
 
@@ -281,6 +303,12 @@ class Controller(QObject):
             self._dialog = SettingsDialog(self)
         self._dialog.show_and_raise()
 
+    def open_about(self) -> None:
+        """系統匣「有新版本」與新版通知：開儀表板的「關於」頁（在那裡按「立即更新」）。"""
+        self.open_settings()
+        if self._dialog is not None:
+            self._dialog.nav.setCurrentRow(ABOUT_PAGE)
+
     def open_log(self) -> None:
         launch.open_path(self._log_file)
 
@@ -367,6 +395,61 @@ class Controller(QObject):
         state = self.update_state
         launch.open_url(state.url if state is not None else app_info.RELEASES_URL)
 
+    @property
+    def install_status(self) -> InstallStatus:
+        return self._install_status
+
+    @property
+    def can_install_update(self) -> bool:
+        """「立即更新」可用：打包版、有注入下載函式、Release 有 exe 與 SHA256SUMS.txt。"""
+        state = self.update_state
+        return (
+            self._download_update is not None
+            and relaunch.frozen_exe() is not None
+            and state is not None
+            and state.should_alert
+            and state.exe_url is not None
+            and state.sums_url is not None
+        )
+
+    def install_update(self) -> None:
+        """「立即更新」：背景下載並核對，完成後（主執行緒）啟動新版並結束自己。"""
+        state, exe, download = self.update_state, relaunch.frozen_exe(), self._download_update
+        if not self.can_install_update or self._install_status is InstallStatus.DOWNLOADING:
+            return
+        assert state is not None and exe is not None and download is not None
+        self._set_install_status(InstallStatus.DOWNLOADING)
+
+        def work() -> None:
+            try:
+                new_exe: Path | None = download(state, exe.parent)
+            except InstallError as e:
+                log.warning("更新失敗：%s", e)
+                new_exe = None
+            except Exception:  # 更新出錯也不能讓程式當掉
+                log.exception("更新發生未預期錯誤")
+                new_exe = None
+            self.install_finished.emit(new_exe)
+
+        threading.Thread(target=work, name="self-update", daemon=True).start()
+
+    def _on_install_finished(self, new_exe: object) -> None:
+        exe = relaunch.frozen_exe()
+        if isinstance(new_exe, Path) and exe is not None:
+            try:
+                relaunch.start_replacement(new_exe, exe)
+            except OSError as e:
+                log.warning("無法啟動新版：%s", type(e).__name__)
+            else:
+                self.quit()
+                return
+        self._set_install_status(InstallStatus.FAILED)
+
+    def _set_install_status(self, status: InstallStatus) -> None:
+        self._install_status = status
+        if self._dialog is not None:
+            self._dialog.refresh_update()
+
     def skip_update(self) -> None:
         if self._updates is not None:
             self._updates.skip_latest()
@@ -380,7 +463,7 @@ class Controller(QObject):
             self._dialog.refresh_update()
         version = self._updates.claim_notification() if self._updates is not None else None
         if version is not None:
-            self._on_notification_click = self.open_release_page
+            self._on_notification_click = self.open_about
             self.tray.notify(
                 t(self._lang, "notify_update_title", version=version),
                 t(self._lang, "notify_update_body"),

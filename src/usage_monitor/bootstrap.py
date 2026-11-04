@@ -12,7 +12,7 @@ from types import TracebackType
 
 from usage_monitor import __version__, diagnose
 from usage_monitor.core.interfaces import Provider
-from usage_monitor.platform import app_identity, autostart, paths
+from usage_monitor.platform import app_identity, autostart, paths, relaunch
 from usage_monitor.platform.cli_refresh import ClaudeCliRefresher
 from usage_monitor.platform.clock import SystemClock
 from usage_monitor.platform.http import RequestsTransport, inject_truststore
@@ -22,6 +22,7 @@ from usage_monitor.providers.claude.provider import ClaudeProvider
 from usage_monitor.services.history import History
 from usage_monitor.services.logging_setup import setup_logging
 from usage_monitor.services.scheduler import Scheduler
+from usage_monitor.services.self_update import download_update
 from usage_monitor.services.settings.schema import Settings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -62,9 +63,10 @@ def enabled_providers(settings: Settings, all_providers: dict[str, Provider]) ->
 
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv if argv is None else argv)
+    replaced = relaunch.replaced_path(argv)  # 「立即更新」啟動的新版：舊版的 exe 路徑
     instance = SingleInstance()
-    if not instance.acquire():
-        return 0  # 已經在執行：不開第二份
+    if not instance.acquire(wait=15.0 if replaced is not None else 0.0):
+        return 0  # 已經在執行：不開第二份（新版等不到舊版結束也一樣）
 
     setup_logging(paths.log_file(), debug="--debug" in argv)
     sys.excepthook = _log_uncaught
@@ -72,6 +74,12 @@ def main(argv: list[str] | None = None) -> int:
     log.info("啟動 v%s", __version__)
     app_identity.report()
     autostart.sync_command()  # 換新版 exe 後，開機啟動跟著指向新的檔案
+    current_exe = relaunch.frozen_exe()
+    if replaced is not None and current_exe is not None:
+        threading.Thread(
+            target=relaunch.remove_replaced, args=(replaced, current_exe),
+            name="remove-old-exe", daemon=True,
+        ).start()  # fmt: skip
     inject_truststore()
 
     settings_store = SettingsStore(paths.settings_file())
@@ -107,7 +115,8 @@ def main(argv: list[str] | None = None) -> int:
 
     settings_store.subscribe(on_settings_changed)
     # 更新檢查：只連 api.github.com，不帶 token（CLAUDE.md §3.9）
-    updates = UpdateChecker(RequestsTransport(), clock, settings_store, __version__)
+    update_transport = RequestsTransport()
+    updates = UpdateChecker(update_transport, clock, settings_store, __version__)
 
     # Qt 放在最後才 import：診斷工具與測試不需要載入 Qt
     from PySide6.QtWidgets import QApplication
@@ -132,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         updates=updates,
         history=history,
         diagnose=diagnose.report_text,  # 在主程式裡跑診斷（不再另外發 diagnose.exe）
+        download_update=lambda state, folder: download_update(update_transport, state, folder),
     )
     controller.start()
     scheduler.start()

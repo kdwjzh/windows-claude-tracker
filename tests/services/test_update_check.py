@@ -127,6 +127,34 @@ def test_untrusted_release_url_is_replaced(tmp_path: Path) -> None:
     assert Harness(tmp_path, resp).checker.check().url == app_info.RELEASES_URL
 
 
+def asset(name: str, url: str | None = None) -> dict[str, str]:
+    return {"name": name, "browser_download_url": url or f"{app_info.DOWNLOAD_PREFIX}v2.0.0/{name}"}
+
+
+def test_release_assets_are_remembered(tmp_path: Path) -> None:
+    assets = [asset("THIRD_PARTY_LICENSES.txt"), asset("ClaudeUsageTracker-v2.0.0.exe"),
+              asset("SHA256SUMS.txt")]  # fmt: skip
+    state = Harness(tmp_path, release("v2.0.0", assets=assets)).checker.check()
+    assert state.exe_url == f"{app_info.DOWNLOAD_PREFIX}v2.0.0/ClaudeUsageTracker-v2.0.0.exe"
+    assert state.sums_url == f"{app_info.DOWNLOAD_PREFIX}v2.0.0/SHA256SUMS.txt"
+
+
+@pytest.mark.parametrize(
+    "assets",
+    [
+        None,
+        "not a list",
+        [asset("ClaudeUsageTracker-v1.9.0.exe"), asset("SHA256SUMS.txt")],  # 檔名版本不對
+        [asset("ClaudeUsageTracker-v2.0.0.exe", "https://evil.example/x.exe")],
+        [{"name": "ClaudeUsageTracker-v2.0.0.exe"}, 3],
+    ],
+)
+def test_missing_or_untrusted_assets(tmp_path: Path, assets: object) -> None:
+    state = Harness(tmp_path, release("v2.0.0", assets=assets)).checker.check()
+    assert state.status is UpdateStatus.AVAILABLE
+    assert state.exe_url is None
+
+
 # ---------------------------------------------------------------- 略過與通知
 
 

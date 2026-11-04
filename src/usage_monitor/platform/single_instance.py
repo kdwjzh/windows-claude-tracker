@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import sys
+import time
 
 MUTEX_NAME = "Local\\MyUsageMonitor_SingleInstance"
 ERROR_ALREADY_EXISTS = 183
@@ -16,7 +17,16 @@ class SingleInstance:
         self.name = name
         self._handle: int | None = None
 
-    def acquire(self) -> bool:
+    def acquire(self, wait: float = 0.0) -> bool:
+        """`wait` 秒內一直重試（「立即更新」啟動的新版要等舊版結束、放掉 mutex）。"""
+        deadline = time.monotonic() + wait
+        while not self._try_acquire():
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.25)
+        return True
+
+    def _try_acquire(self) -> bool:
         if sys.platform != "win32":
             return True
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)

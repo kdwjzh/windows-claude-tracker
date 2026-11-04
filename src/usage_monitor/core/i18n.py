@@ -172,6 +172,9 @@ _ZH_TW: dict[str, str] = {
     "update_menu": "有新版本 v{version} →",
     "update_check_now": "檢查更新",
     "update_download": "前往下載",
+    "update_install": "立即更新",
+    "update_status_downloading": "正在下載 v{version}…",
+    "update_status_install_failed": "更新失敗，請按「前往下載」手動更新",
     "update_status_unknown": "尚未檢查",
     "update_status_checking": "檢查中…",
     "update_status_up_to_date": "已是最新版本",
@@ -183,7 +186,7 @@ _ZH_TW: dict[str, str] = {
     "update_skip": "略過這個版本",
     "update_skip_hint": "不再提醒這個版本；更新的版本仍會提醒",
     "notify_update_title": "用量監控有新版本 v{version}",
-    "notify_update_body": "點這則通知前往下載頁面。",
+    "notify_update_body": "點這則通知查看並更新。",
     # 診斷工具（diagnose）
     "diag_window_title": "用量監控 · 診斷",
     "diag_window_hint": (
@@ -405,6 +408,9 @@ _EN: dict[str, str] = {
     "update_menu": "New version v{version} →",
     "update_check_now": "Check for updates",
     "update_download": "Download",
+    "update_install": "Update now",
+    "update_status_downloading": "Downloading v{version}…",
+    "update_status_install_failed": "Update failed. Use Download to update by hand",
     "update_status_unknown": "Not checked yet",
     "update_status_checking": "Checking…",
     "update_status_up_to_date": "You're up to date",
@@ -419,7 +425,7 @@ _EN: dict[str, str] = {
     "update_skip": "Skip this version",
     "update_skip_hint": "Stop reminding me about this version; newer versions still notify",
     "notify_update_title": "Usage Monitor v{version} is available",
-    "notify_update_body": "Click this notification to open the download page.",
+    "notify_update_body": "Click this notification to see the update.",
     # Diagnostics (diagnose)
     "diag_window_title": "Usage Monitor · Diagnostics",
     "diag_window_hint": (

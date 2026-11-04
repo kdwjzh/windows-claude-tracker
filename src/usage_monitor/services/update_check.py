@@ -4,7 +4,7 @@
 - 啟動 30 秒後一次、之後每 24 小時一次；`enabled=False` 時只有手動按才查
 - 404（尚無 Release 或 API 暫時無法使用）、403／429（次數限制）、網路錯誤 → 「目前無法檢查」，
   不通知、不顯示錯誤，只記 debug log
-- 不下載任何東西：只回報 Release 頁面網址，由使用者自己開
+- 自己不下載：只回報 Release 頁面與附件網址；按「立即更新」才由 self_update 下載（ADR 0007）
 - 邏輯集中在 `tick()`，用 FakeClock＋FakeTransport 就能測
 """
 
@@ -20,7 +20,7 @@ from enum import Enum
 from usage_monitor.core import app_info, semver
 from usage_monitor.core.errors import PollError
 from usage_monitor.core.interfaces import Clock, Transport
-from usage_monitor.core.json_access import as_dict, as_str
+from usage_monitor.core.json_access import as_dict, as_list, as_str
 from usage_monitor.services.settings.schema import Settings, UpdateCheckSettings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.subscribers import Subscribers
@@ -53,6 +53,9 @@ class UpdateState:
     """Release 頁面；一定是本 repo 底下的網址。"""
     skipped: bool = False
     """latest_version 是使用者略過的版本。"""
+    exe_url: str | None = None
+    sums_url: str | None = None
+    """新版 exe 與 SHA256SUMS.txt 的下載網址；Release 沒有這兩個附件時是 None。"""
 
     @property
     def should_alert(self) -> bool:
@@ -64,6 +67,19 @@ def _safe_url(value: object) -> str:
     """只接受本 repo 的 Release 頁面，避免回應被竄改時開到別的網站。"""
     url = as_str(value) or ""
     return url if url.startswith(app_info.RELEASES_URL + "/") else app_info.RELEASES_URL
+
+
+def _asset_url(assets: object, name: str) -> str | None:
+    """找出指定檔名的附件網址；只接受本 repo Release 的下載網址。"""
+    for item in as_list(assets) or []:
+        asset = as_dict(item)
+        if asset is None or as_str(asset.get("name")) != name:
+            continue
+        url = as_str(asset.get("browser_download_url")) or ""
+        if url.startswith(app_info.DOWNLOAD_PREFIX):
+            return url
+        log.warning("Release 附件 %s 的網址不在本 repo 底下，忽略", name)
+    return None
 
 
 class UpdateChecker:
@@ -192,6 +208,8 @@ class UpdateChecker:
                 status=UpdateStatus.AVAILABLE,
                 latest_version=latest,
                 url=_safe_url(data.get("html_url")),
+                exe_url=_asset_url(data.get("assets"), app_info.exe_name(latest)),
+                sums_url=_asset_url(data.get("assets"), app_info.SUMS_NAME),
             )
             return self._set_state(self._with_skip(state, self._settings.current))
         return self._set_state(

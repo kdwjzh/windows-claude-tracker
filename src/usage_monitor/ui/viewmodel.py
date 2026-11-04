@@ -15,6 +15,7 @@ from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.i18n import Lang, t
 from usage_monitor.core.levels import Level, level_of
 from usage_monitor.core.models import ProviderState, Usage, Window
+from usage_monitor.services.self_update import InstallStatus
 from usage_monitor.services.update_check import UpdateState, UpdateStatus
 
 SEGMENTS = 10
@@ -477,11 +478,19 @@ def build_tray_vm(
 # ---------------------------------------------------------------- 更新檢查
 
 
-def update_status_text(state: UpdateState | None, lang: Lang = Lang.ZH_TW) -> str:
-    """「關於」頁版本下方那一行。"""
+def update_status_text(
+    state: UpdateState | None,
+    lang: Lang = Lang.ZH_TW,
+    install: InstallStatus = InstallStatus.IDLE,
+) -> str:
+    """「關於」頁版本下方那一行；「立即更新」下載中或失敗時優先顯示。"""
     if state is None:
         return t(lang, "update_status_unknown")
     version = state.latest_version or ""
+    if install is InstallStatus.DOWNLOADING:
+        return t(lang, "update_status_downloading", version=version)
+    if install is InstallStatus.FAILED:
+        return t(lang, "update_status_install_failed")
     if state.status is UpdateStatus.AVAILABLE:
         key = "update_status_skipped" if state.skipped else "update_status_available"
         return t(lang, key, version=version)

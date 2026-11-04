@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import threading
 import uuid
 
 import pytest
@@ -24,6 +25,17 @@ def test_single_instance_blocks_second_copy() -> None:
     third = SingleInstance(name)
     assert third.acquire() is True
     third.release()
+
+
+def test_single_instance_waits_for_previous_copy() -> None:
+    """「立即更新」：新版等舊版放掉 mutex 才接手。"""
+    name = f"Local\\UsageMonitorTest_{uuid.uuid4().hex}"
+    old, new = SingleInstance(name), SingleInstance(name)
+    assert old.acquire() is True
+    assert new.acquire(wait=0.3) is False  # 舊版還在：等不到就放棄
+    threading.Timer(0.3, old.release).start()
+    assert new.acquire(wait=5) is True
+    new.release()
 
 
 def test_fullscreen_check_runs() -> None:

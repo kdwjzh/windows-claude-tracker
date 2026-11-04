@@ -34,9 +34,11 @@ On first run, Windows SmartScreen may say "Windows protected your PC" (the exe i
 
 ### Updating
 
-When a new version is out, a blue dot appears at the bottom right of the tray icon, the tray menu gets a "New version vX.Y.Z →" item at the top, and you get one notification (also shown in Settings → About). The app never downloads or installs anything itself; clicking only opens the Release page.
+When a new version is out, a blue dot appears at the bottom right of the tray icon, the tray menu gets a "New version vX.Y.Z →" item at the top, and you get one notification. Clicking either opens Settings → About.
 
-Quit the old version (tray right-click → "Quit") → download the new exe → run it. Your settings carry over, and "Start with Windows" switches to the new exe automatically.
+Press "Update now" there: the app downloads the new exe from GitHub Releases into the same folder as the current one, checks its SHA-256 against the release's `SHA256SUMS.txt`, starts it and quits; the new version then deletes the old exe. Nothing is downloaded until you press the button. Your settings and usage history carry over, and "Start with Windows" switches to the new exe automatically.
+
+If the update fails (for example the folder isn't writable), the old version keeps running: press "Download" to open the Release page, quit the old version (tray right-click → "Quit"), download the new exe and run it. Versions up to v1.3.0 don't have "Update now", so updating from them is always done this way.
 
 ### Uninstall
 

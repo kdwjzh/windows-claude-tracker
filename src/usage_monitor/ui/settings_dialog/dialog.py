@@ -32,6 +32,7 @@ from usage_monitor.core import app_info
 from usage_monitor.core.i18n import LANGUAGE_CHOICES, LANGUAGE_NAMES, Lang, t
 from usage_monitor.core.models import ProviderState
 from usage_monitor.services.history import RETENTION_DAYS, Sample
+from usage_monitor.services.self_update import InstallStatus
 from usage_monitor.services.settings.schema import MIN_OPACITY, Settings, WidgetSettings
 from usage_monitor.services.update_check import UpdateState, UpdateStatus
 from usage_monitor.ui import theme
@@ -89,6 +90,11 @@ class SettingsHost(Protocol):
     def update_state(self) -> UpdateState | None: ...
     def check_updates_now(self) -> None: ...
     def open_release_page(self) -> None: ...
+    @property
+    def can_install_update(self) -> bool: ...
+    @property
+    def install_status(self) -> InstallStatus: ...
+    def install_update(self) -> None: ...
     def skip_update(self) -> None: ...
     def open_url(self, url: str) -> None: ...
 
@@ -289,10 +295,13 @@ class SettingsDialog(QWidget):
         bl = QHBoxLayout(buttons)
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(8)
+        self.update_install = QPushButton(t(lang, "update_install"))
+        self.update_install.clicked.connect(self._host.install_update)
         self.update_download = QPushButton(t(lang, "update_download"))
         self.update_download.clicked.connect(self._host.open_release_page)
         self.update_check = QPushButton(f"⟳  {t(lang, 'update_check_now')}")
         self.update_check.clicked.connect(self._host.check_updates_now)
+        bl.addWidget(self.update_install)
         bl.addWidget(self.update_download)
         bl.addWidget(self.update_check)
         self.version_card = SettingCard(t(lang, "about_app", version=__version__), buttons, " ")
@@ -338,8 +347,13 @@ class SettingsDialog(QWidget):
             if state is not None and (state.should_alert or state.status is UpdateStatus.UP_TO_DATE)
             else "cardSubtitle"
         )
-        self.version_card.set_subtitle(update_status_text(state, self._lang), name)
+        install = self._host.install_status
+        if install is InstallStatus.FAILED:
+            name = "statusError"
+        self.version_card.set_subtitle(update_status_text(state, self._lang, install), name)
         alert = state is not None and state.should_alert
+        self.update_install.setVisible(alert and self._host.can_install_update)
+        self.update_install.setEnabled(install is not InstallStatus.DOWNLOADING)
         self.update_download.setVisible(alert)
         self.update_skip.setEnabled(alert)
         self.skip_card.setVisible(alert)
