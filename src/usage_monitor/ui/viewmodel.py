@@ -350,8 +350,32 @@ def truncate(text: str, limit: int = TOOLTIP_MAX) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-TRAY_HIGHEST = "highest"
-"""設定 tray_icon 的特殊值：圖示畫用量最高的服務。"""
+TRAY_AUTO = "auto"
+"""設定 tray_icon 的特殊值（預設）：圖示畫最近有在用的監控對象。"""
+
+
+class RecentUse:
+    """記住每個監控對象最後一次「用量增加」的時間：增加了就代表剛剛有在用它。
+
+    只看百分比有沒有變高，不看程式有沒有開著，所以之後新增的監控對象也適用。
+    重置時百分比下降不算；失敗或過期的資料不算。
+    """
+
+    def __init__(self) -> None:
+        self._seen: dict[str, Usage] = {}
+        self.used_at: dict[str, datetime] = {}
+
+    def update(self, state: ProviderState) -> None:
+        usage = state.usage
+        if usage is None or state.error is not None or state.stale:
+            return
+        prev = self._seen.get(state.provider_id)
+        self._seen[state.provider_id] = usage
+        if prev is None or prev.fetched_at == usage.fetched_at:
+            return
+        pairs = ((usage.session, prev.session), (usage.long, prev.long))
+        if any(new.available and old.available and new.percent > old.percent for new, old in pairs):
+            self.used_at[state.provider_id] = usage.fetched_at
 
 
 def _peak(state: ProviderState | None, now: datetime) -> float | None:
@@ -363,18 +387,41 @@ def _peak(state: ProviderState | None, now: datetime) -> float | None:
                default=0.0)  # fmt: skip
 
 
+def _highest(ids: Sequence[str], states: Mapping[str, ProviderState], now: datetime) -> str | None:
+    """還不知道最近用哪個時：優先看同時有短週期與長週期（5h＋7d，付費方案）的，再比用量。"""
+    peaks = [(p, pid) for pid in ids if (p := _peak(states.get(pid), now)) is not None]
+
+    def both(pid: str) -> bool:
+        usage = states[pid].usage
+        return usage is not None and usage.session.available and usage.long.available
+
+    pool = [item for item in peaks if both(item[1])] or peaks
+    return max(pool, key=lambda item: item[0])[1] if pool else None  # 同分時保留先出現的
+
+
 def icon_provider_id(
     providers: Sequence[ProviderInfo],
     states: Mapping[str, ProviderState],
     now: datetime,
     choice: str | None,
+    used_at: Mapping[str, datetime] | None = None,
 ) -> str | None:
-    """系統匣圖示要畫的服務；選的服務沒啟用（或沒指定）時用第一個啟用的服務。"""
+    """系統匣圖示要畫的監控對象。
+
+    "auto"：最近用量有增加的（`used_at`）；還沒看到增加時用 _highest()。
+    選的監控對象沒啟用（或不認得）時用第一個啟用的。
+    """
     ids = [pid for pid, _ in providers]
-    if choice == TRAY_HIGHEST:
-        peaks = [(p, pid) for pid in ids if (p := _peak(states.get(pid), now)) is not None]
-        if peaks:
-            return max(peaks, key=lambda item: item[0])[1]  # 同分時 max 保留先出現的
+    if choice == TRAY_AUTO:
+        recent = [
+            (at, pid)
+            for pid in ids
+            if (at := (used_at or {}).get(pid)) is not None
+            and _peak(states.get(pid), now) is not None
+        ]
+        pick = max(recent, key=lambda item: item[0])[1] if recent else _highest(ids, states, now)
+        if pick is not None:
+            return pick
     elif choice in ids:
         return choice
     return ids[0] if ids else None
@@ -388,8 +435,9 @@ def build_tray_vm(
     lang: Lang = Lang.ZH_TW,
     update_available: bool = False,
     icon_provider: str | None = None,
+    used_at: Mapping[str, datetime] | None = None,
 ) -> TrayVM:
-    """圖示畫一個服務的兩個週期（`icon_provider`：服務代碼或 "highest"，預設第一個服務）；
+    """圖示畫一個監控對象的兩個週期（`icon_provider`：代碼或 "auto"，預設第一個）；
 
     提示文字每個服務一行，最多 127 字元。
     """
@@ -399,7 +447,7 @@ def build_tray_vm(
         lines.append(_tooltip_line(build_column(p, state, now, tz, lang), state, lang))
 
     bars: tuple[TrayBar | None, TrayBar | None] = (None, None)
-    pid = icon_provider_id(providers, states, now, icon_provider)
+    pid = icon_provider_id(providers, states, now, icon_provider, used_at)
     if pid is not None:
         first = states.get(pid)
         if first is not None and first.usage is not None and not needs_action(first):

@@ -36,6 +36,7 @@ from usage_monitor.ui.viewmodel import (
     AuthNotifier,
     ColumnVM,
     ProviderInfo,
+    RecentUse,
     build_tray_vm,
     build_widget_vm,
     update_menu_text,
@@ -121,6 +122,7 @@ class Controller(QObject):
         self._dialog: SettingsDialog | None = None
         self._updates = updates
         self._history = history
+        self._recent = RecentUse()
         self._on_notification_click: Callable[[], None] = launch.run_diagnose
         """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開 Release 頁面。"""
         self._clock = clock
@@ -447,13 +449,15 @@ class Controller(QObject):
             lang=self._lang,
             update_available=self.update_state is not None and self.update_state.should_alert,
             icon_provider=self._settings.tray_icon,
+            used_at=self._recent.used_at,
         )
 
     def _render(self) -> None:
         self.widget.set_vm(self._widget_vm())
         self.tray.set_vm(self._tray_vm())
 
-    def _on_state(self, _state: ProviderState) -> None:
+    def _on_state(self, state: ProviderState) -> None:
+        self._recent.update(state)
         self._render()
         for n in self._notifier.update(self._providers, self._states.all(), self._lang):
             self._on_notification_click = launch.run_diagnose

@@ -59,10 +59,10 @@ class Settings:
     allow_cli_refresh: bool = False
     language: str = "system"
     """"system"（跟隨 Windows 顯示語言）、"zh-TW"、"en"（CLAUDE.md §3.8）。"""
-    tray_icon: str = "claude"
-    """系統匣圖示畫哪個服務：服務代碼（"claude"、"codex"）或 "highest"（用量最高的）。
+    tray_icon: str = "auto"
+    """系統匣圖示畫哪個監控對象："auto"（最近有在用的）或代碼（"claude"、"codex"）。
 
-    選的服務沒啟用時畫第一個啟用的服務；新欄位用預設值即可，不需要遷移。
+    選的監控對象沒啟用時畫第一個啟用的；新欄位用預設值即可，不需要遷移。
     """
     widget: WidgetSettings = field(default_factory=WidgetSettings)
     update_check: UpdateCheckSettings = field(default_factory=UpdateCheckSettings)

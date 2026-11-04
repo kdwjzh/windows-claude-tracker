@@ -31,7 +31,7 @@ def test_defaults_match_spec() -> None:
         "providers": ["claude"],
         "allow_cli_refresh": False,
         "language": "system",
-        "tray_icon": "claude",  # 系統匣圖示畫哪個服務（ROADMAP 第 7 項）
+        "tray_icon": "auto",  # 系統匣圖示：最近有在用的監控對象（ROADMAP 第 7 項）
         "widget": {
             "visible": True,
             "locked": False,
@@ -56,7 +56,7 @@ def test_round_trip() -> None:
         interval_minutes=10,
         providers=("claude", "codex"),
         allow_cli_refresh=True,
-        tray_icon="highest",
+        tray_icon="codex",
         widget=WidgetSettings(
             visible=False, locked=True, opacity=0.6, screen=r"\\.\DISPLAY2", pos=(10, -20)
         ),
@@ -96,8 +96,8 @@ def test_unknown_fields_ignored() -> None:
         ({"widget": {"hotkey": ""}}, lambda s: s.widget.hotkey == "Ctrl+Alt+U"),
         ({"widget": {"theme": "pink"}}, lambda s: s.widget.theme == "system"),
         ({"language": "fr"}, lambda s: s.language == "system"),
-        ({"tray_icon": ""}, lambda s: s.tray_icon == "claude"),
-        ({"tray_icon": 3}, lambda s: s.tray_icon == "claude"),
+        ({"tray_icon": ""}, lambda s: s.tray_icon == "auto"),
+        ({"tray_icon": 3}, lambda s: s.tray_icon == "auto"),
     ],
 )
 def test_bad_field_falls_back_with_warning(raw: dict[str, object], check: object) -> None:

@@ -140,11 +140,11 @@ def test_tray_icon_choice_is_saved(setup) -> None:
     controller, store, _ = setup
     dialog = dialog_of(controller)
     assert [dialog.tray_icon.itemData(i) for i in range(dialog.tray_icon.count())] == [
-        "claude", "codex", "highest",
+        "auto", "claude", "codex",
     ]  # fmt: skip
-    assert dialog.tray_icon.currentData() == "claude"
-    dialog.tray_icon.setCurrentIndex(dialog.tray_icon.findData("highest"))
-    assert store.current.tray_icon == "highest"
+    assert dialog.tray_icon.currentData() == "auto"
+    dialog.tray_icon.setCurrentIndex(dialog.tray_icon.findData("codex"))
+    assert store.current.tray_icon == "codex"
 
 
 def _wheel(widget: QWidget, notches: int) -> bool:
@@ -470,3 +470,23 @@ def test_usage_page_without_services(setup) -> None:
     dialog.refresh()
     assert dialog.usage_none.isVisible()
     assert not any(p.isVisible() for p in dialog.usage_panels.values())
+
+
+def test_tray_icon_auto_follows_the_service_in_use(setup) -> None:
+    """預設「自動」：哪個監控對象的用量剛增加，系統匣圖示就畫哪個。"""
+    controller, store, states = setup
+    store.update(lambda s: replace(s, providers=["claude", "codex"]))
+    reset = NOW + timedelta(hours=2)
+
+    def push(pid: str, percent: float, minutes: int) -> None:
+        at = NOW + timedelta(minutes=minutes)
+        usage = Usage(Window(True, percent, reset, "5h"), Window(True, 10, reset, "7d"), at)
+        states.update(ProviderState(pid, usage, None, False, "cli"))
+
+    push("claude", 40, 0)
+    push("codex", 5, 0)
+    tray_vm = controller.tray._vm  # pyright: ignore[reportPrivateUsage]
+    assert tray_vm.bars[0] is not None and tray_vm.bars[0].percent == 40  # 還不知道：用量最高
+    push("codex", 8, 5)
+    tray_vm = controller.tray._vm  # pyright: ignore[reportPrivateUsage]
+    assert tray_vm.bars[0] is not None and tray_vm.bars[0].percent == 8

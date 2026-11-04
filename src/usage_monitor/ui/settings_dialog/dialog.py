@@ -47,7 +47,7 @@ from usage_monitor.ui.settings_dialog.widgets import (
 from usage_monitor.ui.theme import DialogPalette
 from usage_monitor.ui.usage_vm import build_service_usage
 from usage_monitor.ui.viewmodel import (
-    TRAY_HIGHEST,
+    TRAY_AUTO,
     ProviderInfo,
     StatusKind,
     service_status,
@@ -246,9 +246,9 @@ class SettingsDialog(QWidget):
             self.service_cards[pid] = (card, switch)
             lay.addWidget(card)
         self.tray_icon = ComboBox()
+        self.tray_icon.addItem(t(lang, "tray_icon_auto"), TRAY_AUTO)
         for pid, name in self._host.catalog:
             self.tray_icon.addItem(name, pid)
-        self.tray_icon.addItem(t(lang, "tray_icon_highest"), TRAY_HIGHEST)
         self.tray_icon.currentIndexChanged.connect(self._on_tray_icon)
         lay.addWidget(SettingCard(t(lang, "tray_icon"), self.tray_icon, t(lang, "tray_icon_hint")))
         lay.addStretch(1)

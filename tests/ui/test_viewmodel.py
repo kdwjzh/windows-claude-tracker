@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -16,6 +17,7 @@ from usage_monitor.ui.viewmodel import (
     HoverLineVM,
     HoverVM,
     NoteKind,
+    RecentUse,
     RowStyle,
     RowVM,
     ServiceStatusVM,
@@ -41,8 +43,16 @@ def win(percent: float, resets_in: timedelta | None, label: str) -> Window:
     return Window(True, percent, NOW + resets_in if resets_in else None, label)
 
 
-def usage(s: float, s_in: timedelta, lw: float, l_in: timedelta, long_label: str = "7d") -> Usage:
-    return Usage(win(s, s_in, "5h"), win(lw, l_in, long_label), NOW - timedelta(minutes=2))
+def usage(
+    s: float,
+    s_in: timedelta,
+    lw: float,
+    l_in: timedelta,
+    long_label: str = "7d",
+    fetched: datetime | None = None,
+) -> Usage:
+    at = fetched or NOW - timedelta(minutes=2)
+    return Usage(win(s, s_in, "5h"), win(lw, l_in, long_label), at)
 
 
 def ok(pid: str, u: Usage, source: str = "桌面版") -> ProviderState:
@@ -453,8 +463,8 @@ def test_reset_exactly_now_counts_as_passed() -> None:
 # ---------------------------------------------------------------- 系統匣圖示畫哪個服務
 
 
-def _tray_bars(icon: str | None, states: dict[str, ProviderState], providers=BOTH):  # type: ignore[no-untyped-def]
-    return build_tray_vm(providers, states, NOW, TPE, icon_provider=icon).bars
+def _tray_bars(icon: str | None, states: dict[str, ProviderState], providers=BOTH, used_at=None):  # type: ignore[no-untyped-def]
+    return build_tray_vm(providers, states, NOW, TPE, icon_provider=icon, used_at=used_at).bars
 
 
 BOTH_OK = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", CODEX_NORMAL)}
@@ -475,27 +485,64 @@ def test_tray_icon_falls_back_to_first_enabled() -> None:
     assert _tray_bars(None, BOTH_OK)[0] == TrayBar(42, Level.OK)
 
 
-def test_tray_icon_highest_usage() -> None:
-    codex_high = usage(12, 3 * H, 95, 20 * D, long_label="30d")
-    states = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", codex_high)}
-    assert _tray_bars("highest", states) == (TrayBar(12, Level.OK), TrayBar(95, Level.CRIT))
-    assert _tray_bars("highest", BOTH_OK)[0] == TrayBar(42, Level.OK)  # Claude 42% 較高
+def test_tray_icon_auto_follows_recent_use() -> None:
+    """自動：哪個監控對象的用量剛增加，就畫哪個；重置造成的下降不算。"""
+    recent = RecentUse()
+    for state in BOTH_OK.values():
+        recent.update(state)  # 第一次看到：還不知道有沒有在用
+    assert recent.used_at == {}
+    codex_up = ok("codex", usage(15, 3 * H, 6, 29 * D, long_label="30d", fetched=NOW))
+    recent.update(codex_up)
+    states = {"claude": BOTH_OK["claude"], "codex": codex_up}
+    assert recent.used_at == {"codex": NOW}
+    assert _tray_bars("auto", states, used_at=recent.used_at)[0] == TrayBar(15, Level.OK)
+
+    claude_up = ok("claude", usage(50, 2 * H, 18, 4 * D, fetched=NOW + M))
+    recent.update(claude_up)
+    states["claude"] = claude_up
+    assert _tray_bars("auto", states, used_at=recent.used_at)[0] == TrayBar(50, Level.OK)
+
+    claude_reset = ok("claude", usage(0, 5 * H, 18, 4 * D, fetched=NOW + 2 * M))  # 下降：不算
+    recent.update(claude_reset)
+    assert recent.used_at["claude"] == NOW + M
 
 
-def test_tray_icon_highest_skips_errors_and_passed_resets() -> None:
+def test_recent_use_ignores_errors_stale_and_repeats() -> None:
+    recent = RecentUse()
+    recent.update(BOTH_OK["claude"])
+    recent.update(BOTH_OK["claude"])  # 同一筆資料
+    stale = replace(ok("claude", usage(90, 2 * H, 30, 4 * D, fetched=NOW)), stale=True)
+    recent.update(stale)
+    assert recent.used_at == {}
+
+
+def test_tray_icon_auto_before_any_use_prefers_5h_and_7d() -> None:
+    """剛開程式還不知道：先看同時有 5h 與 7d 的（付費方案），再比用量。"""
+    codex_30d_only = Usage(Window(label="5h"), win(95, 20 * D, "30d"), NOW - 2 * M)
+    states = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", codex_30d_only)}
+    assert _tray_bars("auto", states)[0] == TrayBar(42, Level.OK)  # Codex 95% 但只有 30 天
+    codex_high = usage(12, 3 * H, 95, 20 * D)
+    states["codex"] = ok("codex", codex_high)
+    assert _tray_bars("auto", states) == (TrayBar(12, Level.OK), TrayBar(95, Level.CRIT))
+    only_30d = {"codex": ok("codex", codex_30d_only)}
+    assert _tray_bars("auto", only_30d)[1] == TrayBar(95, Level.CRIT)  # 沒有付費的就比全部
+
+
+def test_tray_icon_auto_skips_errors_and_passed_resets() -> None:
     claude_err = ProviderState(
         "claude", usage=None, error=PollError(ErrKind.AUTH, "找不到"), stale=False,
         source_label=None,
     )  # fmt: skip
-    assert _tray_bars("highest", {"claude": claude_err, "codex": ok("codex", CODEX_NORMAL)})[
-        0
-    ] == TrayBar(12, Level.OK)
+    states = {"claude": claude_err, "codex": ok("codex", CODEX_NORMAL)}
+    assert _tray_bars("auto", states, used_at={"claude": NOW})[0] == TrayBar(12, Level.OK)
     reset = usage(100, -1 * H, 5, 3 * D)  # 5h 已重置，實際只剩 7d 5%
-    states = {"claude": ok("claude", reset), "codex": ok("codex", CODEX_NORMAL)}
-    assert _tray_bars("highest", states)[0] == TrayBar(12, Level.OK)
+    codex = ok("codex", usage(12, 3 * H, 6, 3 * D))
+    assert _tray_bars("auto", {"claude": ok("claude", reset), "codex": codex})[0] == TrayBar(
+        12, Level.OK
+    )
 
 
-def test_tray_icon_highest_tie_keeps_order_and_nothing_loaded() -> None:
+def test_tray_icon_auto_tie_keeps_order_and_nothing_loaded() -> None:
     same = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", CLAUDE_NORMAL)}
-    assert _tray_bars("highest", same)[0] == TrayBar(42, Level.OK)
-    assert _tray_bars("highest", {}) == (None, None)
+    assert _tray_bars("auto", same)[0] == TrayBar(42, Level.OK)
+    assert _tray_bars("auto", {}) == (None, None)

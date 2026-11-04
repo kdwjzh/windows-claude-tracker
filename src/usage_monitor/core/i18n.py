@@ -124,8 +124,11 @@ _ZH_TW: dict[str, str] = {
     "language": "語言",
     "language_system": "跟隨 Windows",
     "tray_icon": "系統匣圖示顯示",
-    "tray_icon_hint": "隱藏小工具時，從系統匣圖示就能看到這個服務的用量",
-    "tray_icon_highest": "用量最高的服務",
+    "tray_icon_hint": (
+        "自動：顯示最近有在用（用量有增加）的監控對象；"
+        "剛開程式時，先顯示同時有 5h 與 7d 額度中用量最高的"
+    ),
+    "tray_icon_auto": "自動（最近使用的）",
     "status_disabled": "已停用",
     "status_connected": "已連線",
     "status_connected_source": "已連線 · 來源：{source}",
@@ -271,8 +274,11 @@ _EN: dict[str, str] = {
     "language": "Language",
     "language_system": "Follow Windows",
     "tray_icon": "Tray icon shows",
-    "tray_icon_hint": "See this service's usage on the tray icon even when the widget is hidden",
-    "tray_icon_highest": "Highest usage",
+    "tray_icon_hint": (
+        "Auto shows the one you used most recently (its usage went up); right after start, "
+        "the highest usage among those with both 5h and 7d limits"
+    ),
+    "tray_icon_auto": "Auto (most recently used)",
     "status_disabled": "Disabled",
     "status_connected": "Connected",
     "status_connected_source": "Connected · Source: {source}",

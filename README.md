@@ -69,7 +69,7 @@ Location: `%APPDATA%\MyUsageMonitor\settings.json`. Prefer the Settings window (
 | `providers` | `["claude"]` | Services to show: `"claude"`, `"codex"` |
 | `allow_cli_refresh` | `false` | When the Claude Code CLI token has expired and no other sign-in works, run `claude -p . --no-session-persistence` so the CLI refreshes itself (uses a little quota, at most once every 30 minutes, needs Claude Code ≥ 2.0.63) |
 | `language` | `"system"` | `"system"` (follow Windows), `"zh-TW"`, `"en"` |
-| `tray_icon` | `"claude"` | Which service the tray icon draws: `"claude"`, `"codex"` or `"highest"` (whichever has the highest usage); falls back to the first enabled service |
+| `tray_icon` | `"auto"` | Which service the tray icon draws: `"auto"` (the one whose usage went up most recently; right after start, the highest usage among those with both 5h and 7d limits), `"claude"` or `"codex"`; a service that's turned off falls back to the first enabled one |
 | `widget.visible` | `true` | Show the widget |
 | `widget.locked` | `false` | Lock the position (no dragging) |
 | `widget.opacity` | `0.9` | Background opacity, 0.3–1.0 |
