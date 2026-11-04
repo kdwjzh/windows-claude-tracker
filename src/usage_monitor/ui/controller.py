@@ -123,7 +123,7 @@ class Controller(QObject):
         self._updates = updates
         self._history = history
         self._recent = RecentUse()
-        self._on_notification_click: Callable[[], None] = launch.run_diagnose
+        self._on_notification_click: Callable[[], None] = self.run_diagnose
         """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開 Release 頁面。"""
         self._clock = clock
         self._refresh = refresh
@@ -323,7 +323,7 @@ class Controller(QObject):
         launch.open_path(self._log_file.parent)
 
     def run_diagnose(self) -> None:
-        launch.run_diagnose()
+        launch.run_diagnose(self._lang.value)
 
     def clear_history(self) -> None:
         if self._history is not None:
@@ -460,7 +460,7 @@ class Controller(QObject):
         self._recent.update(state)
         self._render()
         for n in self._notifier.update(self._providers, self._states.all(), self._lang):
-            self._on_notification_click = launch.run_diagnose
+            self._on_notification_click = self.run_diagnose
             self.tray.notify(n.title, f"{n.body}\n{t(self._lang, 'notify_click')}")
         if self._dialog is not None and self._dialog.isVisible():
             self._dialog.refresh_services()

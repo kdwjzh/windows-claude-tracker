@@ -44,7 +44,7 @@ body:
     id: diagnose
     attributes:
       label: Diagnostics output
-      description: Settings → Advanced → "Run diagnostics" (or run `diagnose-vX.Y.Z.exe`), then paste the whole output. It's in Traditional Chinese for now; that's fine
+      description: Settings → Advanced → "Run diagnostics" (or run `diagnose-vX.Y.Z.exe`), then paste the whole output. It follows the app language (English or Traditional Chinese); either is fine
       render: text
     validations:
       required: true

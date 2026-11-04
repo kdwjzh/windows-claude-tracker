@@ -64,14 +64,14 @@ def diagnose_command(
     return [str(python), "-m", "usage_monitor.diagnose"]
 
 
-def run_diagnose() -> None:
-    """在新的主控台視窗跑診斷，跑完停住讓使用者看結果。
+def run_diagnose(lang: str | None = None) -> None:
+    """在新的主控台視窗跑診斷，跑完停住讓使用者看結果；`lang` 讓輸出跟程式介面同一種語言。
 
     這是唯一刻意顯示視窗的外部程式，所以不用 CREATE_NO_WINDOW；由使用者自行關閉，不設 timeout。
     """
     if sys.platform != "win32":
         return
-    cmd = subprocess.list2cmdline(diagnose_command())
+    cmd = subprocess.list2cmdline(diagnose_command() + (["--lang", lang] if lang else []))
     try:
         subprocess.Popen(
             ["cmd.exe", "/d", "/k", cmd],

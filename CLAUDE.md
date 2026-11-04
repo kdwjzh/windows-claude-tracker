@@ -58,7 +58,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 | Releases | Push a `vX.Y.Z` tag → GitHub Actions (`windows-latest`) builds, tests and uploads the `.exe` files + SHA-256 to a GitHub Release | Every version is built in a clean environment; see §3.9 |
 | Update check | **On by default**: checks the latest GitHub Release at start and every 24 hours and reminds the user about new versions; can be turned off in Settings | See §3.9 |
 | Internationalization | Traditional Chinese + English; follows the Windows display language by default and can be switched in Settings; the whole UI switches together; translation tables are plain Python dicts (`core/i18n.py`) | See §3.8, ADR 0004 |
-| Documentation language | Project documents (README.md, CHANGELOG.md, CLAUDE.md, docs/) are in English, with README.zh-TW.md kept in sync with README.md; code comments, logs and `diagnose` output stay in Traditional Chinese | Readable by international users and contributors; the app UI is already bilingual |
+| Documentation language | Project documents (README.md, CHANGELOG.md, CLAUDE.md, docs/) are in English, with README.zh-TW.md kept in sync with README.md; code comments and logs stay in Traditional Chinese; `diagnose` output follows the app language (§3.8) | Readable by international users and contributors; the app UI is already bilingual |
 
 ---
 
@@ -265,7 +265,8 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Time formats by language: Chinese 「2時13分」「4天3時」「滿 · 20:15 重置」; English "2h 13m", "4d 3h", "Full · resets 20:15"
 - Errors: `PollError` carries a `reason` (`ErrReason`, for example no token, expired, HTTP 401), and the UI shows text for that reason in the current language; `message` stays in Chinese and is for logs only
 - Sources: `source_label` is a code (`desktop`, `cli`, `codex_cli`) that the UI translates (「桌面版」/ "Desktop app", and so on)
-- Not translated: logs, `diagnose` (for problem reports, stays in Chinese), code comments
+- `diagnose` output (added 2026-11-04): uses the same tables (`diag_*` keys). Language: `--lang zh-TW|en` (the app passes its current language when it runs diagnostics from Settings or a notification) > `language` in `settings.json` (read only, never rewritten) > the Windows display language (`platform/ui_language.py`, no Qt). In Chinese an API error prints `PollError.message` as before; in English it prints the text for its `reason`
+- Not translated: logs (including `diagnose --debug`), code comments
 
 ### 3.9 Releases and update check (added 2026-10-30)
 
@@ -366,6 +367,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ hotkey.py             RegisterHotKey
 │  │  ├─ fullscreen.py         whether the foreground window is full screen
 │  │  ├─ power.py              recognizes the resume-from-sleep message (WM_POWERBROADCAST)
+│  │  ├─ ui_language.py        Windows display language without Qt (for diagnose)
 │  │  └─ topmost.py            WS_EX_NOACTIVATE, re-assert TOPMOST
 │  │
 │  ├─ services/                ③ application logic: no Qt imports, testable on Linux
@@ -395,7 +397,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ hovercard.py
 │  │  └─ settings_dialog/      Settings window (dashboard); charts.py + usage_page.py draw the Usage page
 │  │
-│  └─ diagnose.py              diagnostics tool (console)
+│  └─ diagnose.py              diagnostics tool (console; output in the app language)
 └─ tests/
    ├─ fixtures/                anonymized API response samples (no tokens)
    ├─ fakes.py                 FakeTransport, FakeClock, FakeProvider, FakeCredentialSource

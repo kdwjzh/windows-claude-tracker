@@ -184,6 +184,71 @@ _ZH_TW: dict[str, str] = {
     "update_skip_hint": "不再提醒這個版本；更新的版本仍會提醒",
     "notify_update_title": "用量監控有新版本 v{version}",
     "notify_update_body": "點這則通知前往下載頁面。",
+    # 診斷工具（diagnose）
+    "diag_title": "用量監控診斷 v{version}｜{time}",
+    "diag_description": (
+        "檢查 token 來源與 API，指出卡在哪一步。輸出不含完整 token，可以直接貼給別人看。"
+    ),
+    "diag_arg_poll": "只呼叫一次 API 並印出用量",
+    "diag_arg_no_api": "只檢查 token 來源，不呼叫 API",
+    "diag_arg_debug": "顯示 debug log（不含 token）",
+    "diag_arg_lang": "輸出語言（預設跟隨設定檔的 language）",
+    "diag_mask_short": "***（{n} 字元）",
+    "diag_no_expiry": "沒有到期時間",
+    "diag_expired": "{time}（已過期 {ago}）",
+    "diag_expires_in": "{time}（還有 {countdown}）",
+    "diag_paren": "（{text}）",
+    "diag_none": "沒有",
+    "diag_yes": "有",
+    "diag_unset": "未設定",
+    "diag_cli_env": "CLAUDE_CONFIG_DIR：{value}",
+    "diag_cli_missing": "{path}：不存在（沒有用 CLI 登入，可忽略）",
+    "diag_cli_unreadable": "{path}：存在但讀不到 accessToken",
+    "diag_cli_token": "{path}：token {token}",
+    "diag_expiry": "到期：{expiry}",
+    "diag_cli_expired": "CLI token 已過期，會改用桌面版",
+    "diag_not_object": "不是 JSON 物件",
+    "diag_desktop_section": "Claude 桌面版候選資料夾（依優先順序；→ 是實際會用的 token）",
+    "diag_dir_missing": "資料夾不存在",
+    "diag_files": "config.json：{config}｜Local State：{state}",
+    "diag_config_failed": "config.json 讀取失敗：{error}",
+    "diag_caches": "token cache：{names}",
+    "diag_caches_empty": "（空值略過：{names}）",
+    "diag_no_key": "Local State 沒有 os_crypt.encrypted_key",
+    "diag_dpapi_failed": "DPAPI 解金鑰失敗：{error}",
+    "diag_dpapi_ok": "DPAPI 解金鑰成功（{n} bytes）",
+    "diag_decrypt_failed": "[{name}] 解密失敗：{error}",
+    "diag_decrypted_not_object": "[{name}] 解密後不是 JSON 物件",
+    "diag_decrypted": "[{name}] 解密成功，{n} 筆",
+    "diag_scopes_unknown": "（無法解析）",
+    "diag_entry_empty": "scopes={scopes}  token=（空）",
+    "diag_entry": "scopes={scopes}  token={token}  到期={expiry}",
+    "diag_markers_section": "舊路徑的搬家標記",
+    "diag_marker": "{dir}：{names}（資料已搬到新路徑）",
+    "diag_api_section": "實際呼叫 {name} API",
+    "diag_api_failed": "失敗（{kind}{status}）：{message}",
+    "diag_http": "，HTTP {status}",
+    "diag_source": "token 來源：{source}",
+    "diag_api_ok": "成功，token 來源：{source}",
+    "diag_window_reset": "{countdown}後重置（{moment}）",
+    "diag_summary": "結論",
+    "diag_ok": "可以正常取得用量",
+    "diag_ok_no_api": "token 來源看起來正常（沒有呼叫 API）",
+    "diag_problem_dpapi": (
+        "DPAPI 解不開桌面版的金鑰：請用登入 Windows 的同一個使用者執行，不要用系統管理員或其他帳號"
+    ),
+    "diag_problem_decrypt": "桌面版 token cache 解不開：config.json 與 Local State 可能不是同一組",
+    "diag_problem_no_desktop": (
+        "找不到 Claude 桌面版的資料（config.json＋Local State）：確認已安裝桌面版並登入過；"
+        "若資料夾又搬家，請回報上面列出的路徑"
+    ),
+    "diag_problem_no_token": "桌面版沒有任何登入 token：請開啟 Claude 桌面版並登入",
+    "diag_problem_expired": "桌面版的 token 都已過期：開啟 Claude 桌面版讓它自動更新登入",
+    "diag_hint_auth": "登入資訊無效或被拒絕：開啟 Claude 桌面版確認已登入",
+    "diag_hint_transient": (
+        "網路或伺服器暫時有問題：稍後再試；公司網路請確認能連到 api.anthropic.com"
+    ),
+    "diag_hint_unsupported": "這個帳號不支援用量 API，備援也失敗：請把這份輸出回報",
 }
 
 _EN: dict[str, str] = {
@@ -341,6 +406,89 @@ _EN: dict[str, str] = {
     "update_skip_hint": "Stop reminding me about this version; newer versions still notify",
     "notify_update_title": "Usage Monitor v{version} is available",
     "notify_update_body": "Click this notification to open the download page.",
+    # Diagnostics (diagnose)
+    "diag_title": "Usage Monitor diagnostics v{version} | {time}",
+    "diag_description": (
+        "Checks the token sources and the API and shows where it gets stuck. "
+        "The output never contains a full token, so it's safe to share."
+    ),
+    "diag_arg_poll": "call the API once and print the usage",
+    "diag_arg_no_api": "only check the token sources, don't call the API",
+    "diag_arg_debug": "show debug logs (never contain tokens)",
+    "diag_arg_lang": "output language (default: the language in the settings file)",
+    "diag_mask_short": "*** ({n} chars)",
+    "diag_no_expiry": "no expiry time",
+    "diag_expired": "{time} (expired {ago})",
+    "diag_expires_in": "{time} ({countdown} left)",
+    "diag_paren": " ({text})",
+    "diag_none": "none",
+    "diag_yes": "yes",
+    "diag_unset": "not set",
+    "diag_cli_env": "CLAUDE_CONFIG_DIR: {value}",
+    "diag_cli_missing": "{path}: not found (not signed in with the CLI; safe to ignore)",
+    "diag_cli_unreadable": "{path}: exists, but no accessToken could be read",
+    "diag_cli_token": "{path}: token {token}",
+    "diag_expiry": "Expires: {expiry}",
+    "diag_cli_expired": "The CLI token has expired, so the desktop app's token will be used",
+    "diag_not_object": "not a JSON object",
+    "diag_desktop_section": (
+        "Claude desktop app folders (in priority order; → marks the token that will be used)"
+    ),
+    "diag_dir_missing": "folder not found",
+    "diag_files": "config.json: {config} | Local State: {state}",
+    "diag_config_failed": "Couldn't read config.json: {error}",
+    "diag_caches": "token cache: {names}",
+    "diag_caches_empty": " (empty, skipped: {names})",
+    "diag_no_key": "Local State has no os_crypt.encrypted_key",
+    "diag_dpapi_failed": "DPAPI couldn't decrypt the key: {error}",
+    "diag_dpapi_ok": "DPAPI decrypted the key ({n} bytes)",
+    "diag_decrypt_failed": "[{name}] couldn't be decrypted: {error}",
+    "diag_decrypted_not_object": "[{name}] decrypted, but it isn't a JSON object",
+    "diag_decrypted": "[{name}] decrypted, {n} entries",
+    "diag_scopes_unknown": "(couldn't parse)",
+    "diag_entry_empty": "scopes={scopes}  token=(empty)",
+    "diag_entry": "scopes={scopes}  token={token}  expires={expiry}",
+    "diag_markers_section": "Migration markers in the old folders",
+    "diag_marker": "{dir}: {names} (the data has moved to the new folder)",
+    "diag_api_section": "Calling the {name} API",
+    "diag_api_failed": "Failed ({kind}{status}): {message}",
+    "diag_http": ", HTTP {status}",
+    "diag_source": "Token source: {source}",
+    "diag_api_ok": "Success, token source: {source}",
+    "diag_window_reset": "resets in {countdown} ({moment})",
+    "diag_summary": "Summary",
+    "diag_ok": "Usage can be fetched normally",
+    "diag_ok_no_api": "The token sources look fine (the API wasn't called)",
+    "diag_problem_dpapi": (
+        "DPAPI can't decrypt the desktop app's key: run this as the same user who is signed in "
+        "to Windows, not as an administrator or another account"
+    ),
+    "diag_problem_decrypt": (
+        "The desktop app's token cache can't be decrypted: "
+        "config.json and Local State may not belong together"
+    ),
+    "diag_problem_no_desktop": (
+        "No Claude desktop app data found (config.json + Local State): make sure the desktop "
+        "app is installed and you've signed in; if its folder has moved again, please report "
+        "the paths listed above"
+    ),
+    "diag_problem_no_token": (
+        "The desktop app has no sign-in token: open Claude Desktop and sign in"
+    ),
+    "diag_problem_expired": (
+        "All of the desktop app's tokens have expired: open Claude Desktop so it renews the sign-in"
+    ),
+    "diag_hint_auth": (
+        "The sign-in is invalid or was rejected: open Claude Desktop and check you're signed in"
+    ),
+    "diag_hint_transient": (
+        "A temporary network or server problem: try again later; "
+        "on a company network, check that api.anthropic.com is reachable"
+    ),
+    "diag_hint_unsupported": (
+        "This account doesn't support the usage API and the fallback failed too: "
+        "please report this output"
+    ),
 }
 
 CATALOG: dict[Lang, dict[str, str]] = {Lang.ZH_TW: _ZH_TW, Lang.EN: _EN}

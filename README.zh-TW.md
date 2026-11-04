@@ -83,7 +83,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 ## 常見問題
 
-先執行診斷：設定 → 進階 →「執行診斷」，或直接執行 `diagnose-vX.Y.Z.exe`。輸出會逐步列出每個 token 來源、解密結果與 API 回應，並在最後的「結論」指出卡在哪一步；**輸出不含完整 token，可以直接貼到[問題回報](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose)**。安全性問題請私下回報，見 [SECURITY.md](SECURITY.md)。
+先執行診斷：設定 → 進階 →「執行診斷」，或直接執行 `diagnose-vX.Y.Z.exe`。輸出會逐步列出每個 token 來源、解密結果與 API 回應，並在最後的「結論」指出卡在哪一步；**輸出不含完整 token，可以直接貼到[問題回報](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose)**。輸出語言跟程式介面相同；加上 `--lang en`（或 `--lang zh-TW`）可以指定。安全性問題請私下回報，見 [SECURITY.md](SECURITY.md)。
 
 | 狀況 | 可能原因與處理 |
 | --- | --- |

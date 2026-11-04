@@ -12,7 +12,8 @@ import pytest
 from desktop_fixtures import KEY_PREFIX, encrypt_entries, entry, identity, make_dir
 from fakes import FakeClock, FakeProvider
 from usage_monitor import diagnose
-from usage_monitor.core.errors import ErrKind, PollError
+from usage_monitor.core.errors import ErrKind, ErrReason, PollError
+from usage_monitor.core.i18n import Lang
 from usage_monitor.core.models import Usage, Window
 from usage_monitor.providers.claude.credentials.cli import CliCredentialSource
 
@@ -274,10 +275,84 @@ def test_poll_only_failure(capsys: pytest.CaptureFixture[str]) -> None:
 def test_main_no_api_with_empty_profile(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    for var in ("USERPROFILE", "APPDATA", "LOCALAPPDATA"):
-        monkeypatch.setenv(var, str(tmp_path / var))
-    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
-    assert diagnose.main(["--no-api"]) == 1
+    empty_profile(monkeypatch, tmp_path)
+    assert diagnose.main(["--no-api", "--lang", "zh-TW"]) == 1
     out = capsys.readouterr().out
     assert "找不到 Claude 桌面版的資料" in out
     assert "實際呼叫" not in out
+
+
+def empty_profile(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    for var in ("USERPROFILE", "APPDATA", "LOCALAPPDATA"):
+        monkeypatch.setenv(var, str(tmp_path / var))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    # 不依賴這台機器的 Windows 語言（CI runner 是英文）
+    monkeypatch.setattr(diagnose, "system_ui_languages", lambda: ["zh-TW"])
+
+
+# ---------------------------------------------------------------- 語言（ROADMAP 第 10 項）
+
+
+def test_main_language_follows_settings_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    empty_profile(monkeypatch, tmp_path)
+    assert diagnose.main(["--no-api"]) == 1
+    assert "找不到 Claude 桌面版的資料" in capsys.readouterr().out  # "system" → Windows 語言
+    settings = tmp_path / "APPDATA" / "MyUsageMonitor" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(json.dumps({"language": "en"}), encoding="utf-8")
+    assert diagnose.main(["--no-api"]) == 1
+    out = capsys.readouterr().out
+    assert "No Claude desktop app data found" in out
+    assert "== Summary ==" in out
+    assert diagnose.main(["--no-api", "--lang", "zh-TW"]) == 1  # --lang 優先
+    assert "== 結論 ==" in capsys.readouterr().out
+    assert settings.read_text(encoding="utf-8") == '{"language": "en"}'  # 只讀不寫
+
+
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [('{"language": "en"}', "en"), ('{"language": "fr"}', "system"), ("{bad", "system"),
+     ("[]", "system")],
+)  # fmt: skip
+def test_settings_language(tmp_path: Path, content: str, expected: str) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(content, encoding="utf-8")
+    assert diagnose.settings_language(path) == expected
+    assert diagnose.settings_language(tmp_path / "missing.json") == "system"
+
+
+def test_english_report(tmp_path: Path) -> None:
+    d = make_dir(tmp_path / "claude_pzs8sxrjxfjjc", entry(LONG_TOKEN, NOW + timedelta(hours=1)))
+    report = diagnose.Report(lang=Lang.EN)
+    ok = diagnose.run(
+        report,
+        clock=FakeClock(NOW),
+        cli=CliCredentialSource(tmp_path / "cli" / ".credentials.json"),
+        dirs=[d],
+        unprotect=identity,
+        provider=FakeProvider("claude", [USAGE], source="desktop"),
+    )
+    text = report.text()
+    assert "token source: Desktop app" in text
+    assert ok
+    assert "✓ DPAPI decrypted the key (32 bytes)" in text
+    assert "resets in 1h 47m" in text
+    assert "✓ Usage can be fetched normally" in text
+    assert not any("一" <= ch <= "鿿" for ch in text)  # 沒有任何中文字
+
+
+def test_english_api_failure_uses_reason_text(capsys: pytest.CaptureFixture[str]) -> None:
+    error = PollError(ErrKind.AUTH, "HTTP 401：被拒絕", status=401, reason=ErrReason.REJECTED)
+    assert diagnose.poll_only(FakeProvider("claude", [error]), FakeClock(NOW), Lang.EN) == 1
+    out = capsys.readouterr().out
+    assert "Failed (AUTH, HTTP 401)" in out
+    assert "The sign-in is invalid or was rejected" in out
+    assert "被拒絕" not in out
+
+
+def test_english_expiry_and_mask() -> None:
+    assert diagnose.mask("short", Lang.EN) == "*** (5 chars)"
+    assert "(2h 0m left)" in diagnose.describe_expiry(NOW + timedelta(hours=2), NOW, Lang.EN)
+    assert "(expired 3 hr ago)" in diagnose.describe_expiry(NOW - timedelta(hours=3), NOW, Lang.EN)

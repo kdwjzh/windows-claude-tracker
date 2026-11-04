@@ -160,12 +160,12 @@ def test_auth_notification_click_still_runs_diagnose(app, monkeypatch: pytest.Mo
     from usage_monitor.ui import controller as controller_module
 
     controller, _updates, _store, notes, _opened = app
-    ran: list[int] = []
-    monkeypatch.setattr(controller_module.launch, "run_diagnose", lambda: ran.append(1))
+    ran: list[str | None] = []
+    monkeypatch.setattr(controller_module.launch, "run_diagnose", ran.append)
     controller._states.update(  # pyright: ignore[reportPrivateUsage]
         ProviderState("claude", None, PollError(ErrKind.AUTH, "x", reason=ErrReason.NO_CREDENTIALS),
                       False, None)
     )  # fmt: skip
     assert notes and notes[-1][0] == "Claude 找不到登入資訊"
     controller.tray.notification_clicked.emit()
-    assert ran == [1]
+    assert ran == ["zh-TW"]  # 診斷輸出跟介面同一種語言

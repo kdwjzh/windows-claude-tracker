@@ -11,6 +11,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Choose which service the tray icon shows: Settings → General → AI services to monitor → "Tray icon shows": Auto (most recently used), Claude or Codex. Auto, the default, switches to whichever service's usage just went up, so the icon follows the AI you're using (and any service added later); right after start, before any change is seen, it shows the highest usage among services with both 5-hour and 7-day limits (a paid plan). If the chosen service is turned off, the icon shows the first enabled one, as before. New `tray_icon` field in `settings.json` (no settings migration needed)
 - Bug report and feature request forms for GitHub issues (the bug form asks for the app and Windows versions, how Claude Desktop is installed, and the diagnostics output), `SECURITY.md` for reporting security problems privately, and `CONTRIBUTING.md` with setup steps and the project rules
 
+### Changed
+
+- The diagnostics tool now speaks English too: its output follows the app language (Settings → General → Language, or the Windows display language). "Run diagnostics" from Settings or a notification uses the app's current language, and `diagnose-vX.Y.Z.exe --lang en` (or `--lang zh-TW`) picks one directly. Logs stay in Chinese
+
 ### Fixed
 
 - Scrolling the dashboard with the mouse wheel changed a drop-down (refresh interval, theme, language, tray icon) whenever the pointer passed over it, because Qt's drop-downs react to the wheel on hover. They now ignore the wheel and the page scrolls instead; click a drop-down (or use the keyboard) to change it

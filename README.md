@@ -83,7 +83,7 @@ Location: `%APPDATA%\MyUsageMonitor\settings.json`. Prefer the Settings window (
 
 ## Troubleshooting
 
-Run diagnostics first: Settings → Advanced → "Run diagnostics", or run `diagnose-vX.Y.Z.exe` directly. It goes through each token source, the decryption and the API response step by step, and the final summary (結論) says where it got stuck. **The output never contains full tokens, so you can paste it into a [bug report](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose).** The diagnostics output is in Traditional Chinese for now. Security problems: please report privately, see [SECURITY.md](SECURITY.md).
+Run diagnostics first: Settings → Advanced → "Run diagnostics", or run `diagnose-vX.Y.Z.exe` directly. It goes through each token source, the decryption and the API response step by step, and the final summary says where it got stuck. **The output never contains full tokens, so you can paste it into a [bug report](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose).** The output is in the app's language; add `--lang en` (or `--lang zh-TW`) to choose. Security problems: please report privately, see [SECURITY.md](SECURITY.md).
 
 | Symptom | Likely cause and fix |
 | --- | --- |
