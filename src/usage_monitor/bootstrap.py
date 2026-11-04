@@ -19,6 +19,7 @@ from usage_monitor.platform.http import RequestsTransport, inject_truststore
 from usage_monitor.platform.single_instance import SingleInstance
 from usage_monitor.providers import registry
 from usage_monitor.providers.claude.provider import ClaudeProvider
+from usage_monitor.services.history import History
 from usage_monitor.services.logging_setup import setup_logging
 from usage_monitor.services.scheduler import Scheduler
 from usage_monitor.services.settings.schema import Settings
@@ -84,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
             ClaudeCliRefresher(clock), lambda: settings_store.current.allow_cli_refresh
         )
     states = StateStore()
+    history = History(paths.history_file(), clock)
+    states.subscribe(history.record)  # 只存百分比與時間（ROADMAP 第 5a 項）
     scheduler = Scheduler(
         enabled_providers(settings, all_providers),
         states,
@@ -127,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
         on_quit=app.quit,
         settings_file=paths.settings_file(),
         updates=updates,
+        history=history,
     )
     controller.start()
     scheduler.start()

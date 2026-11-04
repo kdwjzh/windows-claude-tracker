@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
+- Usage history: every successful refresh is now saved to `%APPDATA%\MyUsageMonitor\history.db` (service, period, percentage, time and reset time only; never tokens or conversations) and kept for 90 days. This is groundwork for a usage page in the dashboard. Settings → Advanced → "Clear usage history" deletes it
 - Choose which service the tray icon shows: Settings → General → AI services to monitor → "Tray icon shows" (Claude, Codex, or whichever has the highest usage right now). Useful if you mainly watch Codex and keep the widget hidden. Defaults to Claude; if the chosen service is turned off, the icon shows the first enabled one, as before. New `tray_icon` field in `settings.json` (no settings migration needed)
 - Bug report and feature request forms for GitHub issues (the bug form asks for the app and Windows versions, how Claude Desktop is installed, and the diagnostics output), `SECURITY.md` for reporting security problems privately, and `CONTRIBUTING.md` with setup steps and the project rules
 

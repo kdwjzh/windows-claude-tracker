@@ -48,6 +48,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 | Single instance | Named mutex `Local\MyUsageMonitor_SingleInstance` | |
 | Show/hide shortcut | `Ctrl+Alt+U` by default, changeable in Settings; a failed registration is reported | Still usable if it clashes with other software |
 | Settings / log location | `%APPDATA%\MyUsageMonitor\settings.json`, `monitor.log` (RotatingFileHandler 1 MB × 2) | |
+| Usage history | `%APPDATA%\MyUsageMonitor\history.db` (stdlib `sqlite3`): one row per reported window per successful poll (service, `session`/`long`, label, `fetched_at`, percent, `resets_at`), kept 90 days; errors and stale states are not recorded; any database error is only logged; "Clear usage history" deletes the file (added 2026-11-04) | Groundwork for a usage page in the dashboard; only numbers and times, nothing that identifies the account |
 | Settings format | JSON with `schema_version`; newer versions migrate old settings automatically | New fields don't break old settings files |
 | Quality tools | `ruff` (lint + format), `pyright`, `import-linter`, `pytest` (with `pytest-qt`, `pytest-cov`), `pre-commit` + `gitleaks` | See §5.4 |
 | Version control | **Public** GitHub repo `https://github.com/kdwjzh/windows-claude-tracker`, default branch `main`. Never commit tokens, personal paths, account details or screenshots; `.gitignore` excludes `settings.json`, `*.log`, `dist/`, `build/`; `gitleaks` in `pre-commit` scans for secrets before each commit | Anyone can see the full history |
@@ -243,7 +244,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Windows 11 style, navigation on the left: General / Advanced / About
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": Claude / Codex / Highest usage)
-- Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics
+- Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
 - About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with a "Download" link) / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
 
@@ -370,6 +371,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ scheduler.py          independent polling, backoff and auth pause per service
 │  │  ├─ state_store.py        holds each service's ProviderState and notifies subscribers on change
 │  │  ├─ update_check.py       queries the latest GitHub Release (through Transport) and produces UpdateState
+│  │  ├─ history.py            usage history in sqlite3 (subscribes to StateStore)
 │  │  ├─ settings/
 │  │  │  ├─ schema.py          Settings dataclass + defaults + validation
 │  │  │  ├─ migrations.py      v1 → v2 → … migration functions
@@ -479,6 +481,7 @@ Scheduler (background thread)
 
 1. **Tokens never touch disk**: not in logs, files, caches, exception messages or tooltips. The masking filter covers `sk-ant-…`, `Bearer …` and JWTs (`eyJ…`). `diagnose` prints only masked tokens (first 14 + last 4 characters). `tests/fixtures/` must never contain real tokens.
 2. **Read only**: never modify any Claude or Codex file.
+   The usage history (`history.db`) stores only service ids, percentages and times: never tokens, account ids or anything else.
 3. **Never use the refresh token**.
 4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. The update check connects only to `api.github.com` and sends no token, account or usage data.
 

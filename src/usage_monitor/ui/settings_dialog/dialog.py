@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSlider,
@@ -79,6 +80,7 @@ class SettingsHost(Protocol):
     def dialog_palette(self) -> DialogPalette: ...
     def open_log_folder(self) -> None: ...
     def run_diagnose(self) -> None: ...
+    def clear_history(self) -> None: ...
     @property
     def update_state(self) -> UpdateState | None: ...
     def check_updates_now(self) -> None: ...
@@ -248,6 +250,11 @@ class SettingsDialog(QWidget):
         diagnose = QPushButton(t(lang, "run"))
         diagnose.clicked.connect(self._host.run_diagnose)
         lay.addWidget(SettingCard(t(lang, "diagnose"), diagnose, t(lang, "diagnose_hint")))
+        self.history_clear = QPushButton(t(lang, "history_clear_button"))
+        self.history_clear.clicked.connect(self._on_clear_history)
+        lay.addWidget(
+            SettingCard(t(lang, "history_clear"), self.history_clear, t(lang, "history_clear_hint"))
+        )
         lay.addStretch(1)
         return page
 
@@ -353,6 +360,16 @@ class SettingsDialog(QWidget):
         value = self.tray_icon.itemData(index)
         if isinstance(value, str) and value != self._host.settings.tray_icon:
             self._update(tray_icon=value)
+
+    def _on_clear_history(self) -> None:
+        """刪除無法復原：先確認。"""
+        answer = QMessageBox.question(
+            self, t(self._lang, "history_clear"), t(self._lang, "history_clear_confirm")
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self._host.clear_history()
+            self.history_clear.setText(t(self._lang, "history_cleared"))
+            self.history_clear.setEnabled(False)
 
     def _set_service(self, provider_id: str, enabled: bool) -> None:
         self._host.set_provider_enabled(provider_id, enabled)

@@ -21,6 +21,7 @@ from usage_monitor.core.i18n import Lang, resolve_language, t
 from usage_monitor.core.interfaces import Clock
 from usage_monitor.core.models import ProviderState
 from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power, topmost
+from usage_monitor.services.history import History
 from usage_monitor.services.settings.schema import Settings, WidgetSettings
 from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
@@ -106,6 +107,7 @@ class Controller(QObject):
         on_quit: Callable[[], None],
         settings_file: Path | None = None,
         updates: UpdateChecker | None = None,
+        history: History | None = None,
     ) -> None:
         """`catalog`：所有可用的服務；實際顯示哪些依設定的 providers 決定。"""
         super().__init__()
@@ -118,6 +120,7 @@ class Controller(QObject):
         self._settings_file = settings_file or settings_store.path
         self._dialog: SettingsDialog | None = None
         self._updates = updates
+        self._history = history
         self._on_notification_click: Callable[[], None] = launch.run_diagnose
         """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開 Release 頁面。"""
         self._clock = clock
@@ -319,6 +322,10 @@ class Controller(QObject):
 
     def run_diagnose(self) -> None:
         launch.run_diagnose()
+
+    def clear_history(self) -> None:
+        if self._history is not None:
+            self._history.clear()
 
     # ---------------------------------------------------------------- 更新檢查
 

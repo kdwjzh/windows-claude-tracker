@@ -16,7 +16,7 @@ pytest.importorskip("pytestqt")
 
 from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, Qt
 from PySide6.QtGui import QWheelEvent
-from PySide6.QtWidgets import QApplication, QLabel, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QMessageBox, QWidget
 
 from fakes import FakeClock
 from usage_monitor.core.errors import ErrKind, PollError
@@ -168,6 +168,20 @@ def test_mouse_wheel_does_not_change_dropdowns(setup) -> None:
             assert _wheel(combo, notches) is False  # 交給捲動區捲動頁面
         assert combo.currentIndex() == index
     assert store.current == before
+
+
+@pytest.mark.parametrize("answer", ["Yes", "No"])
+def test_clear_history_asks_first(setup, monkeypatch: pytest.MonkeyPatch, answer: str) -> None:
+    controller, _, _ = setup
+    cleared: list[int] = []
+    monkeypatch.setattr(controller, "clear_history", lambda: cleared.append(1))
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *_args: getattr(QMessageBox.StandardButton, answer)
+    )
+    dialog = dialog_of(controller)
+    dialog.history_clear.click()
+    assert cleared == ([1] if answer == "Yes" else [])
+    assert dialog.history_clear.isEnabled() is (answer == "No")
 
 
 def test_service_toggle_enables_codex_column(setup) -> None:

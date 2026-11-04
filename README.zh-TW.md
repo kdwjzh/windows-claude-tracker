@@ -55,6 +55,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 - 只**讀取**這些檔案，從不修改，也從不使用 refresh token（不會讓官方 App 被登出）
 - token 只送到 `api.anthropic.com` 與 `chatgpt.com`；不寫進 log、設定檔或任何地方
+- 用量歷史（`%APPDATA%\MyUsageMonitor\history.db`）只存每次更新的百分比與時間，保留 90 天，只在你的電腦上；設定 → 進階 →「清除用量歷史」可以刪除
 - 預設每 5 分鐘查一次；這些用量 API 沒有公開文件，格式改變時可能暫時顯示不出來
 
 ## 設定檔

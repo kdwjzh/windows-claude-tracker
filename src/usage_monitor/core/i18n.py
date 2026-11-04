@@ -141,6 +141,11 @@ _ZH_TW: dict[str, str] = {
     "diagnose": "執行診斷",
     "diagnose_hint": "在新視窗檢查 token 來源與 API；輸出不含完整 token",
     "run": "執行",
+    "history_clear": "清除用量歷史",
+    "history_clear_hint": "每次更新的百分比與時間只存在這台電腦，保留 90 天；不含 token 或對話內容",
+    "history_clear_button": "清除",
+    "history_clear_confirm": "要刪除所有用量歷史紀錄嗎？刪除後無法復原。",
+    "history_cleared": "已清除",
     "about_app": "用量監控 v{version}",
     "about_desc": "顯示 Claude 與 Codex 訂閱用量",
     "about_settings_file": "設定檔",
@@ -277,6 +282,14 @@ _EN: dict[str, str] = {
     "diagnose": "Run diagnostics",
     "diagnose_hint": "Checks token sources and the API in a new window; never shows full tokens",
     "run": "Run",
+    "history_clear": "Clear usage history",
+    "history_clear_hint": (
+        "Usage percentages and times from each refresh, kept on this computer for 90 days; "
+        "never tokens or conversations"
+    ),
+    "history_clear_button": "Clear",
+    "history_clear_confirm": "Delete all usage history? This can't be undone.",
+    "history_cleared": "Cleared",
     "about_app": "Usage Monitor v{version}",
     "about_desc": "Shows your Claude and Codex subscription usage",
     "about_settings_file": "Settings file",

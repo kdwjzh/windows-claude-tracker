@@ -35,6 +35,10 @@ def log_file() -> Path:
     return app_dir() / "monitor.log"
 
 
+def history_file() -> Path:
+    return app_dir() / "history.db"
+
+
 def app_icon_file() -> Path:
     """assets/app.ico：打包版在 PyInstaller 解壓目錄，開發版在 repo 根目錄。"""
     bundle = getattr(sys, "_MEIPASS", None)

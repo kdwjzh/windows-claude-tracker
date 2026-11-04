@@ -55,6 +55,7 @@ Privacy and security:
 
 - These files are only **read**, never modified, and the refresh token is never used (so the official apps never get signed out)
 - Tokens are sent only to `api.anthropic.com` and `chatgpt.com`, and never written to logs, settings or anywhere else
+- Usage history (`%APPDATA%\MyUsageMonitor\history.db`) keeps only the percentages and times from each refresh, for 90 days, on your computer; Settings → Advanced → "Clear usage history" deletes it
 - Usage is checked every 5 minutes by default. These usage APIs are undocumented, so a format change may temporarily stop the numbers from showing
 
 ## Settings file
