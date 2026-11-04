@@ -448,3 +448,54 @@ def test_reset_exactly_now_counts_as_passed() -> None:
     u = Usage(Window(True, 80, NOW, "5h"), win(18, 4 * D, "7d"), NOW - 2 * M)
     (column,) = vm({"claude": ok("claude", u)}, [CLAUDE]).columns
     assert column.rows[0].text == "已重置 · 更新中"
+
+
+# ---------------------------------------------------------------- 系統匣圖示畫哪個服務
+
+
+def _tray_bars(icon: str | None, states: dict[str, ProviderState], providers=BOTH):  # type: ignore[no-untyped-def]
+    return build_tray_vm(providers, states, NOW, TPE, icon_provider=icon).bars
+
+
+BOTH_OK = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", CODEX_NORMAL)}
+
+
+def test_tray_icon_chosen_service() -> None:
+    assert _tray_bars("codex", BOTH_OK) == (TrayBar(12, Level.OK), TrayBar(6, Level.OK))
+    assert _tray_bars("claude", BOTH_OK) == (TrayBar(42, Level.OK), TrayBar(18, Level.OK))
+
+
+def test_tray_icon_falls_back_to_first_enabled() -> None:
+    """選的服務沒啟用（或不認得）：照舊畫第一個啟用的服務。"""
+    assert _tray_bars("codex", {"claude": ok("claude", CLAUDE_NORMAL)}, [CLAUDE]) == (
+        TrayBar(42, Level.OK),
+        TrayBar(18, Level.OK),
+    )
+    assert _tray_bars("cursor", BOTH_OK)[0] == TrayBar(42, Level.OK)
+    assert _tray_bars(None, BOTH_OK)[0] == TrayBar(42, Level.OK)
+
+
+def test_tray_icon_highest_usage() -> None:
+    codex_high = usage(12, 3 * H, 95, 20 * D, long_label="30d")
+    states = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", codex_high)}
+    assert _tray_bars("highest", states) == (TrayBar(12, Level.OK), TrayBar(95, Level.CRIT))
+    assert _tray_bars("highest", BOTH_OK)[0] == TrayBar(42, Level.OK)  # Claude 42% 較高
+
+
+def test_tray_icon_highest_skips_errors_and_passed_resets() -> None:
+    claude_err = ProviderState(
+        "claude", usage=None, error=PollError(ErrKind.AUTH, "找不到"), stale=False,
+        source_label=None,
+    )  # fmt: skip
+    assert _tray_bars("highest", {"claude": claude_err, "codex": ok("codex", CODEX_NORMAL)})[
+        0
+    ] == TrayBar(12, Level.OK)
+    reset = usage(100, -1 * H, 5, 3 * D)  # 5h 已重置，實際只剩 7d 5%
+    states = {"claude": ok("claude", reset), "codex": ok("codex", CODEX_NORMAL)}
+    assert _tray_bars("highest", states)[0] == TrayBar(12, Level.OK)
+
+
+def test_tray_icon_highest_tie_keeps_order_and_nothing_loaded() -> None:
+    same = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", CLAUDE_NORMAL)}
+    assert _tray_bars("highest", same)[0] == TrayBar(42, Level.OK)
+    assert _tray_bars("highest", {}) == (None, None)

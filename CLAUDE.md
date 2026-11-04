@@ -229,7 +229,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 **Tray and notifications (artboard 4)**
 
-- **A single tray icon** (decided 2026-10-31): it draws both periods of the first enabled service (usually Claude); the tooltip has one line per service
+- **A single tray icon** (decided 2026-10-31): it draws both periods of one service, chosen in Settings with `tray_icon` (revised 2026-11-04): a service id (default `"claude"`) or `"highest"` (the service whose highest period percentage is largest, ignoring services in error and periods whose reset time has passed; ties go to the earlier service). If the chosen service isn't enabled, it draws the first enabled one. The red and gray dots still cover every enabled service; the tooltip has one line per service
 - Icon: 64×64 dark rounded square, top bar 5h, bottom bar 7d, same color rules as above
   - **Red dot** = needs action (not signed in, expired, rejected)
   - **Gray dot** = stale data (temporarily unreachable)
@@ -242,7 +242,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 - Windows 11 style, navigation on the left: General / Advanced / About
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
-- General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu)
+- General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": Claude / Codex / Highest usage)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics
 - About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with a "Download" link) / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
@@ -363,7 +363,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ single_instance.py
 │  │  ├─ hotkey.py             RegisterHotKey
 │  │  ├─ fullscreen.py         whether the foreground window is full screen
-│  ├─ power.py              recognizes the resume-from-sleep message (WM_POWERBROADCAST)
+│  │  ├─ power.py              recognizes the resume-from-sleep message (WM_POWERBROADCAST)
 │  │  └─ topmost.py            WS_EX_NOACTIVATE, re-assert TOPMOST
 │  │
 │  ├─ services/                ③ application logic: no Qt imports, testable on Linux

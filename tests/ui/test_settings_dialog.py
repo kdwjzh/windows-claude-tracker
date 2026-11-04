@@ -133,6 +133,17 @@ def test_theme_change_restyles(setup) -> None:
     assert theme.DIALOG_LIGHT.window in dialog.styleSheet()
 
 
+def test_tray_icon_choice_is_saved(setup) -> None:
+    controller, store, _ = setup
+    dialog = dialog_of(controller)
+    assert [dialog.tray_icon.itemData(i) for i in range(dialog.tray_icon.count())] == [
+        "claude", "codex", "highest",
+    ]  # fmt: skip
+    assert dialog.tray_icon.currentData() == "claude"
+    dialog.tray_icon.setCurrentIndex(dialog.tray_icon.findData("highest"))
+    assert store.current.tray_icon == "highest"
+
+
 def test_service_toggle_enables_codex_column(setup) -> None:
     controller, store, _ = setup
     _, codex_switch = dialog_of(controller).service_cards["codex"]

@@ -434,6 +434,7 @@ class Controller(QObject):
             self._clock.now(),
             lang=self._lang,
             update_available=self.update_state is not None and self.update_state.should_alert,
+            icon_provider=self._settings.tray_icon,
         )
 
     def _render(self) -> None:

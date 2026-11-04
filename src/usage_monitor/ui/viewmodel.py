@@ -350,6 +350,36 @@ def truncate(text: str, limit: int = TOOLTIP_MAX) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+TRAY_HIGHEST = "highest"
+"""設定 tray_icon 的特殊值：圖示畫用量最高的服務。"""
+
+
+def _peak(state: ProviderState | None, now: datetime) -> float | None:
+    """這個服務目前最高的百分比；沒有可用資料時 None。重置時間已過的週期算 0。"""
+    if state is None or state.usage is None or needs_action(state):
+        return None
+    windows = (state.usage.session, state.usage.long)
+    return max((0.0 if reset_passed(w, now) else w.percent for w in windows if w.available),
+               default=0.0)  # fmt: skip
+
+
+def icon_provider_id(
+    providers: Sequence[ProviderInfo],
+    states: Mapping[str, ProviderState],
+    now: datetime,
+    choice: str | None,
+) -> str | None:
+    """系統匣圖示要畫的服務；選的服務沒啟用（或沒指定）時用第一個啟用的服務。"""
+    ids = [pid for pid, _ in providers]
+    if choice == TRAY_HIGHEST:
+        peaks = [(p, pid) for pid in ids if (p := _peak(states.get(pid), now)) is not None]
+        if peaks:
+            return max(peaks, key=lambda item: item[0])[1]  # 同分時 max 保留先出現的
+    elif choice in ids:
+        return choice
+    return ids[0] if ids else None
+
+
 def build_tray_vm(
     providers: Sequence[ProviderInfo],
     states: Mapping[str, ProviderState],
@@ -357,16 +387,21 @@ def build_tray_vm(
     tz: tzinfo | None = None,
     lang: Lang = Lang.ZH_TW,
     update_available: bool = False,
+    icon_provider: str | None = None,
 ) -> TrayVM:
-    """圖示畫第一個服務（Claude）的兩個週期；提示文字每個服務一行，最多 127 字元。"""
+    """圖示畫一個服務的兩個週期（`icon_provider`：服務代碼或 "highest"，預設第一個服務）；
+
+    提示文字每個服務一行，最多 127 字元。
+    """
     lines: list[str] = []
     for p in providers:
         state = states.get(p[0])
         lines.append(_tooltip_line(build_column(p, state, now, tz, lang), state, lang))
 
     bars: tuple[TrayBar | None, TrayBar | None] = (None, None)
-    if providers:
-        first = states.get(providers[0][0])
+    pid = icon_provider_id(providers, states, now, icon_provider)
+    if pid is not None:
+        first = states.get(pid)
         if first is not None and first.usage is not None and not needs_action(first):
 
             def bar(w: Window) -> TrayBar | None:

@@ -59,6 +59,11 @@ class Settings:
     allow_cli_refresh: bool = False
     language: str = "system"
     """"system"（跟隨 Windows 顯示語言）、"zh-TW"、"en"（CLAUDE.md §3.8）。"""
+    tray_icon: str = "claude"
+    """系統匣圖示畫哪個服務：服務代碼（"claude"、"codex"）或 "highest"（用量最高的）。
+
+    選的服務沒啟用時畫第一個啟用的服務；新欄位用預設值即可，不需要遷移。
+    """
     widget: WidgetSettings = field(default_factory=WidgetSettings)
     update_check: UpdateCheckSettings = field(default_factory=UpdateCheckSettings)
 
@@ -184,6 +189,7 @@ def settings_from_dict(raw: Mapping[str, object]) -> tuple[Settings, list[str]]:
         providers=r.names("providers", default.providers),
         allow_cli_refresh=r.boolean("allow_cli_refresh", default.allow_cli_refresh),
         language=r.text("language", default.language, LANGUAGE_CHOICES),
+        tray_icon=r.text("tray_icon", default.tray_icon),
         widget=_widget_from_dict(raw.get("widget"), warnings),
         update_check=_update_check_from_dict(raw.get("update_check"), warnings),
     )

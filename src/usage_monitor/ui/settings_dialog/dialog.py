@@ -43,6 +43,7 @@ from usage_monitor.ui.settings_dialog.widgets import (
 )
 from usage_monitor.ui.theme import DialogPalette
 from usage_monitor.ui.viewmodel import (
+    TRAY_HIGHEST,
     ProviderInfo,
     StatusKind,
     service_status,
@@ -221,6 +222,12 @@ class SettingsDialog(QWidget):
             card = SettingCard(name, switch, " ")
             self.service_cards[pid] = (card, switch)
             lay.addWidget(card)
+        self.tray_icon = QComboBox()
+        for pid, name in self._host.catalog:
+            self.tray_icon.addItem(name, pid)
+        self.tray_icon.addItem(t(lang, "tray_icon_highest"), TRAY_HIGHEST)
+        self.tray_icon.currentIndexChanged.connect(self._on_tray_icon)
+        lay.addWidget(SettingCard(t(lang, "tray_icon"), self.tray_icon, t(lang, "tray_icon_hint")))
         lay.addStretch(1)
         return page
 
@@ -342,6 +349,11 @@ class SettingsDialog(QWidget):
         if isinstance(value, str) and value != self._host.settings.language:
             self._update(language=value)
 
+    def _on_tray_icon(self, index: int) -> None:
+        value = self.tray_icon.itemData(index)
+        if isinstance(value, str) and value != self._host.settings.tray_icon:
+            self._update(tray_icon=value)
+
     def _set_service(self, provider_id: str, enabled: bool) -> None:
         self._host.set_provider_enabled(provider_id, enabled)
 
@@ -387,6 +399,10 @@ class SettingsDialog(QWidget):
         index = self.language.findData(s.language)
         self.language.setCurrentIndex(max(index, 0))
         self.language.blockSignals(False)
+
+        self.tray_icon.blockSignals(True)
+        self.tray_icon.setCurrentIndex(max(self.tray_icon.findData(s.tray_icon), 0))
+        self.tray_icon.blockSignals(False)
 
         self.refresh_services()
         self.refresh_update()
