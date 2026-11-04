@@ -364,6 +364,24 @@ def run(
     return api_ok if api_ok is not None else not report.problems
 
 
+def report_text(lang: Lang, *, call_api: bool = True) -> str:
+    """跑完整診斷並回傳文字（主程式的診斷視窗用；bootstrap 注入給 ui，ui 不直接 import 這裡）。
+
+    會讀檔、解密、呼叫 API：要在背景執行緒呼叫。truststore 由呼叫端先注入。
+    """
+    clock = SystemClock()
+    report = Report(lang=lang)
+    run(
+        report,
+        clock=clock,
+        cli=CliCredentialSource(),
+        dirs=desktop_paths.data_dirs(),
+        unprotect=oscrypt.dpapi_unprotect,
+        provider=registry.create("claude", RequestsTransport(), clock) if call_api else None,
+    )
+    return report.text()
+
+
 def poll_only(provider: Provider, clock: Clock, lang: Lang = Lang.ZH_TW) -> int:
     report = Report(lang=lang)
     ok = check_api(report, provider, clock)

@@ -28,6 +28,7 @@ from usage_monitor.services.state_store import StateStore
 from usage_monitor.services.update_check import UpdateChecker, UpdateState
 from usage_monitor.ui import theme
 from usage_monitor.ui.bridge import Bridge
+from usage_monitor.ui.diagnose_window import DiagnoseWindow, RunDiagnostics
 from usage_monitor.ui.hovercard import HoverCard
 from usage_monitor.ui.settings_dialog.dialog import SettingsDialog
 from usage_monitor.ui.theme import DialogPalette, Palette
@@ -109,6 +110,7 @@ class Controller(QObject):
         settings_file: Path | None = None,
         updates: UpdateChecker | None = None,
         history: History | None = None,
+        diagnose: RunDiagnostics | None = None,
     ) -> None:
         """`catalog`：所有可用的服務；實際顯示哪些依設定的 providers 決定。"""
         super().__init__()
@@ -123,6 +125,9 @@ class Controller(QObject):
         self._updates = updates
         self._history = history
         self._recent = RecentUse()
+        self._diagnose = diagnose
+        """bootstrap 注入的「執行診斷並回傳文字」（ui 不能直接 import diagnose）。"""
+        self._diagnose_window: DiagnoseWindow | None = None
         self._on_notification_click: Callable[[], None] = self.run_diagnose
         """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開 Release 頁面。"""
         self._clock = clock
@@ -192,6 +197,8 @@ class Controller(QObject):
         self._bridge.close()
         if self._dialog is not None:
             self._dialog.hide()
+        if self._diagnose_window is not None:
+            self._diagnose_window.hide()
         self.card.hide()
         self.tray.hide()
         self.widget.hide()
@@ -323,7 +330,15 @@ class Controller(QObject):
         launch.open_path(self._log_file.parent)
 
     def run_diagnose(self) -> None:
-        launch.run_diagnose(self._lang.value)
+        """開診斷結果視窗並在背景執行（儀表板「進階」與登入錯誤通知共用）。"""
+        if self._diagnose is None:
+            log.warning("沒有注入診斷函式，無法執行診斷")
+            return
+        if self._diagnose_window is None:
+            self._diagnose_window = DiagnoseWindow(
+                self._diagnose, self._lang, self.dialog_palette()
+            )
+        self._diagnose_window.show_and_run()
 
     def clear_history(self) -> None:
         if self._history is not None:
@@ -392,6 +407,8 @@ class Controller(QObject):
         self.card.set_lang(lang)
         self.widget_menu = menu.build_widget_menu(self)
         self.tray.set_menu(menu.build_tray_menu(self))
+        if self._diagnose_window is not None:
+            self._diagnose_window.set_lang(lang)
         if self._dialog is not None:
             was_visible = self._dialog.isVisible()
             page = self._dialog.nav.currentRow()
@@ -476,6 +493,8 @@ class Controller(QObject):
         self.card.set_palette(palette)
         if self._dialog is not None:
             self._dialog.apply_palette(self.dialog_palette())
+        if self._diagnose_window is not None:
+            self._diagnose_window.apply_palette(self.dialog_palette())
 
     # ---------------------------------------------------------------- 顯示／隱藏
 

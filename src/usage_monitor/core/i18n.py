@@ -143,7 +143,7 @@ _ZH_TW: dict[str, str] = {
     "open_logs_hint": "回報問題時附上 monitor.log",
     "open": "開啟",
     "diagnose": "執行診斷",
-    "diagnose_hint": "在新視窗檢查 token 來源與 API；輸出不含完整 token",
+    "diagnose_hint": "檢查 token 來源與 API，結果可以複製；輸出不含完整 token",
     "run": "執行",
     "history_clear": "清除用量歷史",
     "history_clear_hint": "每次更新的百分比與時間只存在這台電腦，保留 90 天；不含 token 或對話內容",
@@ -185,6 +185,15 @@ _ZH_TW: dict[str, str] = {
     "notify_update_title": "用量監控有新版本 v{version}",
     "notify_update_body": "點這則通知前往下載頁面。",
     # 診斷工具（diagnose）
+    "diag_window_title": "用量監控 · 診斷",
+    "diag_window_hint": (
+        "逐步檢查 token 來源、解密與 API；輸出不含完整 token，可以按「複製」貼到問題回報"
+    ),
+    "diag_running": "診斷中…",
+    "diag_copy": "複製",
+    "diag_copied": "已複製",
+    "diag_rerun": "重新執行",
+    "diag_window_failed": "診斷時發生錯誤（{error}），詳細內容請看 log",
     "diag_title": "用量監控診斷 v{version}｜{time}",
     "diag_description": (
         "檢查 token 來源與 API，指出卡在哪一步。輸出不含完整 token，可以直接貼給別人看。"
@@ -359,7 +368,9 @@ _EN: dict[str, str] = {
     "open_logs_hint": "Attach monitor.log when reporting a problem",
     "open": "Open",
     "diagnose": "Run diagnostics",
-    "diagnose_hint": "Checks token sources and the API in a new window; never shows full tokens",
+    "diagnose_hint": (
+        "Checks token sources and the API; the result can be copied and never shows full tokens"
+    ),
     "run": "Run",
     "history_clear": "Clear usage history",
     "history_clear_hint": (
@@ -407,6 +418,16 @@ _EN: dict[str, str] = {
     "notify_update_title": "Usage Monitor v{version} is available",
     "notify_update_body": "Click this notification to open the download page.",
     # Diagnostics (diagnose)
+    "diag_window_title": "Usage Monitor · Diagnostics",
+    "diag_window_hint": (
+        "Checks the token sources, the decryption and the API step by step. The output never "
+        "contains full tokens: press Copy and paste it into a bug report"
+    ),
+    "diag_running": "Running diagnostics…",
+    "diag_copy": "Copy",
+    "diag_copied": "Copied",
+    "diag_rerun": "Run again",
+    "diag_window_failed": "Diagnostics hit an error ({error}); see the log for details",
     "diag_title": "Usage Monitor diagnostics v{version} | {time}",
     "diag_description": (
         "Checks the token sources and the API and shows where it gets stuck. "

@@ -52,7 +52,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 | Settings format | JSON with `schema_version`; newer versions migrate old settings automatically | New fields don't break old settings files |
 | Quality tools | `ruff` (lint + format), `pyright`, `import-linter`, `pytest` (with `pytest-qt`, `pytest-cov`), `pre-commit` + `gitleaks` | See §5.4 |
 | Version control | **Public** GitHub repo `https://github.com/kdwjzh/windows-claude-tracker`, default branch `main`. Never commit tokens, personal paths, account details or screenshots; `.gitignore` excludes `settings.json`, `*.log`, `dist/`, `build/`; `gitleaks` in `pre-commit` scans for secrets before each commit | Anyone can see the full history |
-| Packaging | PyInstaller `--noconsole --onefile`, excluding unneeded Qt modules; `diagnose` is built separately with a console | |
+| Packaging | PyInstaller `--noconsole --onefile`, excluding unneeded Qt modules; **one exe only**: diagnostics run inside the app (a diagnostics window), no separate `diagnose.exe` (decided 2026-11-04, ADR 0006) | Users often didn't download the second exe, and "Run diagnostics" then showed an unreadable console error |
 | App icon | `assets/app.ico` (a design file from the maintainer, 9 sizes from 16 to 256 px, **never generated or overwritten by code**): the exe icon (`--icon`) and the icon of every window and taskbar button (`QApplication.setWindowIcon()`); `__main__.py` sets the AppUserModelID `kdwjzh.WindowsClaudeTracker` first thing. The tray icon is still drawn dynamically from usage | When run with pythonw, the taskbar then doesn't show the Python icon or group it with other Python programs; the tray must reflect usage live |
 | License | This project: MIT (`LICENSE`); Releases include `THIRD_PARTY_LICENSES.txt` (the PySide6/Qt LGPL-3.0 notice and the licenses of other dependencies); the README and the About page carry an unofficial-tool disclaimer | The exe bundles Qt, and the LGPL requires shipping the license and how to get the source |
 | Releases | Push a `vX.Y.Z` tag → GitHub Actions (`windows-latest`) builds, tests and uploads the `.exe` files + SHA-256 to a GitHub Release | Every version is built in a clean environment; see §3.9 |
@@ -238,6 +238,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
   - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens the Release page; the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
 - Windows notifications appear only when action is needed, once per error type; buttons "Run diagnostics" and "Close". A temporary network outage never notifies
+- **Diagnostics window** (added 2026-11-04, not in the designs; `ui/diagnose_window.py`): opened by Settings → Advanced → "Run diagnostics" and by clicking a sign-in error notification. Shows the full `diagnose` report (monospace, scrollable, selectable, read only) with "Copy" and "Run again" buttons; the report runs on a background thread and comes back through a Qt signal, showing 「診斷中…」/ "Running diagnostics…" with the buttons disabled meanwhile; an exception shows a one-line error (details in the log) and never crashes the app; closing only hides it. `ui` can't import `diagnose` (same layer), so `bootstrap.py` injects `diagnose.report_text` into the `Controller`
 
 **Settings window (artboard 5)**
 
@@ -265,7 +266,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Time formats by language: Chinese 「2時13分」「4天3時」「滿 · 20:15 重置」; English "2h 13m", "4d 3h", "Full · resets 20:15"
 - Errors: `PollError` carries a `reason` (`ErrReason`, for example no token, expired, HTTP 401), and the UI shows text for that reason in the current language; `message` stays in Chinese and is for logs only
 - Sources: `source_label` is a code (`desktop`, `cli`, `codex_cli`) that the UI translates (「桌面版」/ "Desktop app", and so on)
-- `diagnose` output (added 2026-11-04): uses the same tables (`diag_*` keys). Language: `--lang zh-TW|en` (the app passes its current language when it runs diagnostics from Settings or a notification) > `language` in `settings.json` (read only, never rewritten) > the Windows display language (`platform/ui_language.py`, no Qt). In Chinese an API error prints `PollError.message` as before; in English it prints the text for its `reason`
+- `diagnose` output (added 2026-11-04): uses the same tables (`diag_*` keys). Language: `--lang zh-TW|en` (terminal use; the app's diagnostics window always uses the current UI language) > `language` in `settings.json` (read only, never rewritten) > the Windows display language (`platform/ui_language.py`, no Qt). In Chinese an API error prints `PollError.message` as before; in English it prints the text for its `reason`
 - Not translated: logs (including `diagnose --debug`), code comments
 
 ### 3.9 Releases and update check (added 2026-10-30)
@@ -273,7 +274,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 **Release workflow (`.github/workflows/release.yml`)**
 
 - Trigger: pushing a tag matching `v*.*.*` (for example `v1.2.0`)
-- Steps (`windows-latest`): `check.ps1` passes → `build.ps1` builds → the tag version must equal `__version__` in `src/usage_monitor/__init__.py` (fail otherwise) → generate `SHA256SUMS.txt` → create a GitHub Release with `ClaudeUsageTracker-vX.Y.Z.exe`, `diagnose-vX.Y.Z.exe`, `THIRD_PARTY_LICENSES.txt` and `SHA256SUMS.txt`; the notes come from the matching section of `CHANGELOG.md`
+- Steps (`windows-latest`): `check.ps1` passes → `build.ps1` builds → the tag version must equal `__version__` in `src/usage_monitor/__init__.py` (fail otherwise) → generate `SHA256SUMS.txt` → create a GitHub Release with `ClaudeUsageTracker-vX.Y.Z.exe`, `THIRD_PARTY_LICENSES.txt` and `SHA256SUMS.txt` (no separate diagnostics exe since 2026-11-04, ADR 0006); the notes come from the matching section of `CHANGELOG.md`
 - `THIRD_PARTY_LICENSES.txt` (added 2026-10-31): generated by `scripts/third_party_licenses.py` during `build.ps1` from the packages installed at that moment. Contents: Python; PySide6/shiboken6/Qt (LGPL-3.0 notice + where to get the source); the full license texts of requests, urllib3, idna, charset-normalizer, certifi, truststore, cryptography, cffi and the other dependencies; and the full LGPL-3.0/GPL-3.0 texts (`assets/licenses/`, from gnu.org). Qt modules excluded by `build.ps1` (PySide6-Addons and others) are not listed
 - Tags containing `-` (for example `v1.2.0-beta.1`) are marked as pre-releases
 - Steps to release (also in the README): update `__version__` → update `CHANGELOG.md` → commit → `git tag v1.2.0` → `git push --tags`
@@ -314,7 +315,7 @@ windows_Claude-usage-monitor/
 ├─ .github/ISSUE_TEMPLATE/     bug report and feature request forms; blank issues off, security link to SECURITY.md
 ├─ scripts/
 │  ├─ check.ps1                runs every check (must pass before finishing any work)
-│  ├─ build.ps1                PyInstaller build (+ generates THIRD_PARTY_LICENSES.txt)
+│  ├─ build.ps1                PyInstaller build of the single exe (+ generates THIRD_PARTY_LICENSES.txt)
 │  ├─ version_info.py          exe file version info
 │  ├─ release_notes.py         verifies the tag version, extracts the CHANGELOG section
 │  └─ third_party_licenses.py  generates THIRD_PARTY_LICENSES.txt (§3.9)
@@ -395,9 +396,10 @@ windows_Claude-usage-monitor/
 │  │  │  ├─ tray.py
 │  │  │  └─ icon.py            draws the icon from TrayVM
 │  │  ├─ hovercard.py
+│  │  ├─ diagnose_window.py    diagnostics window (runs the injected report function on a background thread)
 │  │  └─ settings_dialog/      Settings window (dashboard); charts.py + usage_page.py draw the Usage page
 │  │
-│  └─ diagnose.py              diagnostics tool (console; output in the app language)
+│  └─ diagnose.py              diagnostics checks: report_text() for the app window, main() for python -m
 └─ tests/
    ├─ fixtures/                anonymized API response samples (no tokens)
    ├─ fakes.py                 FakeTransport, FakeClock, FakeProvider, FakeCredentialSource
@@ -558,7 +560,7 @@ Progress and per-version details are in `CHANGELOG.md`.
 | --- | --- | --- |
 | 0 Tooling and skeleton | pyproject, ruff / pyright / import-linter, `check.ps1`, CI, ADRs 0001–0003 | v0.0.1 |
 | 1 Claude core | CLI + desktop tokens (including the new `Claude-Data` path and OSCrypt v10 decryption), usage API, Messages fallback | v0.1.0 |
-| 2 Diagnostics | `python -m usage_monitor.diagnose`: walks through token sources, decryption and API results step by step (tokens always masked) | v0.2.0 |
+| 2 Diagnostics | `python -m usage_monitor.diagnose`: walks through token sources, decryption and API results step by step (tokens always masked); shown in a window inside the app since 2026-11-04 | v0.2.0 |
 | 3 Services | Log masking, settings (schema / migration / atomic writes), independent scheduling and backoff per service | v0.3.0 |
 | 4 Tray + widget | The design v1 floating widget, tray, hover card, drag snapping, shortcut, auto-hide in full screen | v0.4.0 |
 | 5 Codex | Codex usage; windows classified and labeled by `limit_window_seconds` | v0.5.0 |

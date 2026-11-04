@@ -10,7 +10,7 @@ import sys
 import threading
 from types import TracebackType
 
-from usage_monitor import __version__
+from usage_monitor import __version__, diagnose
 from usage_monitor.core.interfaces import Provider
 from usage_monitor.platform import app_identity, autostart, paths
 from usage_monitor.platform.cli_refresh import ClaudeCliRefresher
@@ -131,6 +131,7 @@ def main(argv: list[str] | None = None) -> int:
         settings_file=paths.settings_file(),
         updates=updates,
         history=history,
+        diagnose=diagnose.report_text,  # 在主程式裡跑診斷（不再另外發 diagnose.exe）
     )
     controller.start()
     scheduler.start()

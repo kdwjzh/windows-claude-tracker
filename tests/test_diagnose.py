@@ -356,3 +356,14 @@ def test_english_expiry_and_mask() -> None:
     assert diagnose.mask("short", Lang.EN) == "*** (5 chars)"
     assert "(2h 0m left)" in diagnose.describe_expiry(NOW + timedelta(hours=2), NOW, Lang.EN)
     assert "(expired 3 hr ago)" in diagnose.describe_expiry(NOW - timedelta(hours=3), NOW, Lang.EN)
+
+
+def test_report_text_for_the_app_window(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """主程式的診斷視窗用：回傳文字、不 print（主程式用 --noconsole 打包）。"""
+    empty_profile(monkeypatch, tmp_path)
+    text = diagnose.report_text(Lang.EN, call_api=False)
+    assert "No Claude desktop app data found" in text
+    assert "== Summary ==" in text
+    assert capsys.readouterr().out == ""

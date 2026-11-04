@@ -13,7 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
-- The diagnostics tool now speaks English too: its output follows the app language (Settings → General → Language, or the Windows display language). "Run diagnostics" from Settings or a notification uses the app's current language, and `diagnose-vX.Y.Z.exe --lang en` (or `--lang zh-TW`) picks one directly. Logs stay in Chinese
+- Diagnostics now run inside the app, and each release ships a single exe (no more `diagnose-vX.Y.Z.exe`). Settings → Advanced → "Run diagnostics" and clicking a sign-in error notification open a diagnostics window that shows the full report (monospace, scrollable, selectable) with "Copy" and "Run again" buttons; it runs in the background and shows "Running diagnostics…" meanwhile. Before, the separate exe was often missing and the button only showed an unreadable command-prompt error. `python -m usage_monitor.diagnose` (with `--lang`, `--poll`, `--no-api`, `--debug`) still works in a terminal
+- The diagnostics tool now speaks English too: its output follows the app language (Settings → General → Language, or the Windows display language). "Run diagnostics" from Settings or a notification uses the app's current language, and `python -m usage_monitor.diagnose --lang en` (or `--lang zh-TW`) picks one in a terminal. Logs stay in Chinese
 
 ### Fixed
 

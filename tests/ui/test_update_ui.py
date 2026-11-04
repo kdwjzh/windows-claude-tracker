@@ -157,15 +157,14 @@ def test_tray_menu_has_update_item_on_top(app) -> None:
 def test_auth_notification_click_still_runs_diagnose(app, monkeypatch: pytest.MonkeyPatch) -> None:
     from usage_monitor.core.errors import ErrKind, ErrReason, PollError
     from usage_monitor.core.models import ProviderState
-    from usage_monitor.ui import controller as controller_module
 
     controller, _updates, _store, notes, _opened = app
-    ran: list[str | None] = []
-    monkeypatch.setattr(controller_module.launch, "run_diagnose", ran.append)
+    ran: list[int] = []
+    monkeypatch.setattr(controller, "run_diagnose", lambda: ran.append(1))
     controller._states.update(  # pyright: ignore[reportPrivateUsage]
         ProviderState("claude", None, PollError(ErrKind.AUTH, "x", reason=ErrReason.NO_CREDENTIALS),
                       False, None)
     )  # fmt: skip
     assert notes and notes[-1][0] == "Claude 找不到登入資訊"
     controller.tray.notification_clicked.emit()
-    assert ran == ["zh-TW"]  # 診斷輸出跟介面同一種語言
+    assert ran == [1]  # 開主程式裡的診斷視窗（不再啟動外部的 diagnose.exe）

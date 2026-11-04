@@ -24,7 +24,6 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 1. 到 [Releases](https://github.com/kdwjzh/windows-claude-tracker/releases) 下載最新版的：
    - `ClaudeUsageTracker-vX.Y.Z.exe`（主程式）
-   - `diagnose-vX.Y.Z.exe`（診斷工具，選用；放在主程式**同一個資料夾**，「執行診斷」才找得到）
    - 可用 `SHA256SUMS.txt` 核對檔案：`Get-FileHash .\ClaudeUsageTracker-vX.Y.Z.exe`
 2. 把 exe 放在固定的資料夾（例如 `%LOCALAPPDATA%\Programs\ClaudeUsageTracker\`），雙擊執行
 3. 工作列右側上方會出現小工具，系統匣也會有圖示；右鍵 →「開啟儀表板」可開啟開機時啟動
@@ -83,7 +82,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 ## 常見問題
 
-先執行診斷：設定 → 進階 →「執行診斷」，或直接執行 `diagnose-vX.Y.Z.exe`。輸出會逐步列出每個 token 來源、解密結果與 API 回應，並在最後的「結論」指出卡在哪一步；**輸出不含完整 token，可以直接貼到[問題回報](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose)**。輸出語言跟程式介面相同；加上 `--lang en`（或 `--lang zh-TW`）可以指定。安全性問題請私下回報，見 [SECURITY.md](SECURITY.md)。
+先執行診斷：設定 → 進階 →「執行診斷」（出現登入錯誤通知時，點通知也可以）。視窗會逐步列出每個 token 來源、解密結果與 API 回應，並在最後的「結論」指出卡在哪一步；**輸出不含完整 token，按「複製」後可以直接貼到[問題回報](https://github.com/kdwjzh/windows-claude-tracker/issues/new/choose)**。輸出語言跟程式介面相同。安全性問題請私下回報，見 [SECURITY.md](SECURITY.md)。
 
 | 狀況 | 可能原因與處理 |
 | --- | --- |
@@ -124,7 +123,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1   # 打包到 dist\
 
 GitHub Actions 會自動跑完所有檢查、打包，並建立 Release（附兩個 exe、`THIRD_PARTY_LICENSES.txt` 與 `SHA256SUMS.txt`，說明取自 CHANGELOG）。標籤含 `-`（例如 `v1.2.0-beta.1`）會標成 pre-release。
 
-如果想先在本機打包試跑：`scripts\build.ps1` 會產生 `dist\ClaudeUsageTracker.exe`、`dist\diagnose.exe` 與 `dist\THIRD_PARTY_LICENSES.txt`。程式圖示 `assets\app.ico` 是設計好的檔案，不由程式產生；要換圖示就直接替換這個檔案（需含 16–256px 共 9 種尺寸）。
+如果想先在本機打包試跑：`scripts\build.ps1` 會產生 `dist\ClaudeUsageTracker.exe` 與 `dist\THIRD_PARTY_LICENSES.txt`。程式圖示 `assets\app.ico` 是設計好的檔案，不由程式產生；要換圖示就直接替換這個檔案（需含 16–256px 共 9 種尺寸）。
 
 ## 授權
 

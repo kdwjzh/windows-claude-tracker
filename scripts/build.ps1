@@ -1,6 +1,5 @@
-﻿# 打包成兩個 exe（CLAUDE.md 階段 8a）：
-#   dist\ClaudeUsageTracker.exe  主程式（--noconsole --onefile）
-#   dist\diagnose.exe            診斷工具（有主控台，不含 Qt）
+﻿# 打包成一個 exe（CLAUDE.md §2 Packaging；診斷工具已整合進主程式，見 ADR 0006）：
+#   dist\ClaudeUsageTracker.exe  主程式（--noconsole --onefile，含診斷視窗）
 #   dist\THIRD_PARTY_LICENSES.txt  打包進 exe 的第三方元件授權（含 PySide6／Qt 的 LGPL）
 # 用法：powershell -ExecutionPolicy Bypass -File scripts\build.ps1 [-SkipCheck]
 param([switch]$SkipCheck)
@@ -32,7 +31,6 @@ $src = Join-Path $root 'src'
 
 Invoke-Step '版本資訊' {
     python scripts\version_info.py "$build\version_app.txt" ClaudeUsageTracker "Claude / Codex usage monitor" ClaudeUsageTracker.exe
-    python scripts\version_info.py "$build\version_diagnose.txt" diagnose "Claude Usage Tracker diagnostics" diagnose.exe
 }
 
 # 用不到的 Qt 模組全部排除，exe 才不會塞進 WebEngine、QML 等大型元件
@@ -59,13 +57,6 @@ Invoke-Step 'PyInstaller：ClaudeUsageTracker.exe' {
         --add-data "$icon;assets" `
         --version-file "$build\version_app.txt" @qtExcludes @devExcludes `
         "$src\usage_monitor\__main__.py"
-}
-
-Invoke-Step 'PyInstaller：diagnose.exe' {
-    pyinstaller @common --console --name diagnose --icon $icon `
-        --version-file "$build\version_diagnose.txt" `
-        --exclude-module PySide6 --exclude-module shiboken6 @devExcludes `
-        "$src\usage_monitor\diagnose.py"
 }
 
 Invoke-Step '第三方授權' {

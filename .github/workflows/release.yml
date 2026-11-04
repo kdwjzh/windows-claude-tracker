@@ -1,5 +1,5 @@
 # 發佈（CLAUDE.md §3.9）：push vX.Y.Z 標籤 → 檢查、打包 → 建立 GitHub Release
-#   附件：ClaudeUsageTracker-vX.Y.Z.exe、diagnose-vX.Y.Z.exe、THIRD_PARTY_LICENSES.txt、SHA256SUMS.txt
+#   附件：ClaudeUsageTracker-vX.Y.Z.exe、THIRD_PARTY_LICENSES.txt、SHA256SUMS.txt（診斷已整合進主程式）
 #   說明：CHANGELOG.md 對應版本的段落；標籤含 "-"（例如 v1.2.0-beta.1）標為 pre-release
 name: Release
 
@@ -51,7 +51,6 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item dist/ClaudeUsageTracker.exe "release/ClaudeUsageTracker-$env:TAG.exe"
-          Copy-Item dist/diagnose.exe "release/diagnose-$env:TAG.exe"
           Copy-Item dist/THIRD_PARTY_LICENSES.txt release/THIRD_PARTY_LICENSES.txt
           $lines = Get-ChildItem release -Filter *.exe | Sort-Object Name | ForEach-Object {
             "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
@@ -68,7 +67,6 @@ jobs:
           if ($pre -eq 'true') { $flags += '--prerelease' }
           gh release create $env:TAG `
             "release/ClaudeUsageTracker-$env:TAG.exe" `
-            "release/diagnose-$env:TAG.exe" `
             release/THIRD_PARTY_LICENSES.txt `
             release/SHA256SUMS.txt `
             --title $env:TAG --notes-file release-notes.md --verify-tag @flags

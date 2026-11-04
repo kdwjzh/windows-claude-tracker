@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import pytest
 
-from usage_monitor.platform import autostart, fullscreen, hotkey, launch, power
+from usage_monitor.platform import autostart, fullscreen, hotkey, power
 
 
 @pytest.mark.parametrize(
@@ -86,39 +83,6 @@ def test_autostart_sync_write_failure_is_logged_not_raised() -> None:
         raise OSError("denied")
 
     assert autostart.sync_command(read=lambda: '"C:\\old.exe"', write=fail) is False
-
-
-def test_diagnose_command() -> None:
-    assert launch.diagnose_command(r"C:\venv\Scripts\pythonw.exe", frozen=False) == [
-        r"C:\venv\Scripts\python.exe",
-        "-m",
-        "usage_monitor.diagnose",
-    ]
-    assert launch.diagnose_command(
-        r"C:\Apps\UsageMonitor.exe", frozen=True, find=lambda _: None
-    ) == [r"C:\Apps\diagnose.exe"]
-
-
-def test_diagnose_command_uses_found_exe(tmp_path: Path) -> None:
-    found = tmp_path / "diagnose-v0.9.0.exe"
-    cmd = launch.diagnose_command(r"C:\Apps\ClaudeUsageTracker-v0.9.0.exe", frozen=True,
-                                  find=lambda _: found)  # fmt: skip
-    assert cmd == [str(found)]
-
-
-def test_find_diagnose_exe_prefers_plain_then_newest_versioned(tmp_path: Path) -> None:
-    assert launch.find_diagnose_exe(tmp_path) is None
-    old = tmp_path / "diagnose-v0.8.0.exe"
-    new = tmp_path / "diagnose-v0.9.0.exe"
-    old.write_bytes(b"")
-    new.write_bytes(b"")
-    os.utime(old, (1_000, 1_000))
-    os.utime(new, (2_000, 2_000))
-    (tmp_path / "diagnose-v1.0.0.exe").mkdir()  # 資料夾不算
-    assert launch.find_diagnose_exe(tmp_path) == new
-    plain = tmp_path / "diagnose.exe"
-    plain.write_bytes(b"")
-    assert launch.find_diagnose_exe(tmp_path) == plain
 
 
 @pytest.mark.parametrize(

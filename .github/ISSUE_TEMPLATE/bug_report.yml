@@ -44,7 +44,7 @@ body:
     id: diagnose
     attributes:
       label: Diagnostics output
-      description: Settings → Advanced → "Run diagnostics" (or run `diagnose-vX.Y.Z.exe`), then paste the whole output. It follows the app language (English or Traditional Chinese); either is fine
+      description: Open the dashboard → Advanced → "Run diagnostics", press "Copy" when it finishes, then paste the whole output here. It follows the app language (English or Traditional Chinese); either is fine
       render: text
     validations:
       required: true
