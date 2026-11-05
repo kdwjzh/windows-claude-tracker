@@ -482,13 +482,18 @@ def update_status_text(
     state: UpdateState | None,
     lang: Lang = Lang.ZH_TW,
     install: InstallStatus = InstallStatus.IDLE,
+    percent: int | None = None,
 ) -> str:
-    """「關於」頁版本下方那一行；「立即更新」下載中或失敗時優先顯示。"""
+    """「關於」頁版本下方那一行；「立即更新」下載中（含百分比）、啟動中或失敗時優先顯示。"""
     if state is None:
         return t(lang, "update_status_unknown")
     version = state.latest_version or ""
     if install is InstallStatus.DOWNLOADING:
+        if percent is not None:
+            return t(lang, "update_status_downloading_percent", version=version, percent=percent)
         return t(lang, "update_status_downloading", version=version)
+    if install is InstallStatus.STARTING:
+        return t(lang, "update_status_starting", version=version)
     if install is InstallStatus.FAILED:
         return t(lang, "update_status_install_failed")
     if state.status is UpdateStatus.AVAILABLE:

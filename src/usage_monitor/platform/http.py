@@ -14,10 +14,11 @@ import requests
 
 from usage_monitor import __version__
 from usage_monitor.core.errors import ErrKind, ErrReason, PollError
-from usage_monitor.core.interfaces import Response
+from usage_monitor.core.interfaces import Progress, Response
 
 ALLOWED_HOSTS = frozenset({"api.anthropic.com", "chatgpt.com"})
 USER_AGENT = f"usage-monitor/{__version__}"
+CHUNK = 64 * 1024
 
 
 def inject_truststore() -> None:
@@ -43,21 +44,37 @@ class RequestsTransport:
         self._session = session or requests.Session()
         self._session.headers["User-Agent"] = USER_AGENT
 
-    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response:
-        return self._request("GET", url, headers, None, timeout)
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str],
+        timeout: float,
+        on_progress: Progress | None = None,
+    ) -> Response:
+        return self._request("GET", url, headers, None, timeout, on_progress)
 
     def post(self, url: str, headers: Mapping[str, str], json: Any, timeout: float) -> Response:
         return self._request("POST", url, headers, json, timeout)
 
     def _request(
-        self, method: str, url: str, headers: Mapping[str, str], json: Any, timeout: float
+        self,
+        method: str,
+        url: str,
+        headers: Mapping[str, str],
+        json: Any,
+        timeout: float,
+        on_progress: Progress | None = None,
     ) -> Response:
         _check_destination(url, headers)
         try:
             r = self._session.request(
                 method, url, headers=dict(headers), json=json, timeout=timeout,
-                allow_redirects=False,
+                allow_redirects=False, stream=on_progress is not None,
             )  # fmt: skip
+            if on_progress is not None and r.status_code == 200:
+                body = _read_with_progress(r, on_progress)
+            else:
+                body = r.content
         except requests.Timeout as e:
             raise PollError(ErrKind.TRANSIENT, "連線逾時", reason=ErrReason.TIMEOUT) from e
         except requests.RequestException as e:
@@ -65,4 +82,19 @@ class RequestsTransport:
             raise PollError(
                 ErrKind.TRANSIENT, f"連線失敗：{type(e).__name__}", reason=ErrReason.NETWORK
             ) from e
-        return Response(status=r.status_code, headers=dict(r.headers), body=r.content)
+        return Response(status=r.status_code, headers=dict(r.headers), body=body)
+
+
+def _read_with_progress(r: requests.Response, on_progress: Progress) -> bytes:
+    try:
+        total: int | None = int(r.headers.get("Content-Length", ""))
+    except ValueError:
+        total = None
+    chunks: list[bytes] = []
+    received = 0
+    on_progress(0, total)
+    for chunk in r.iter_content(CHUNK):
+        chunks.append(chunk)
+        received += len(chunk)
+        on_progress(received, total)
+    return b"".join(chunks)

@@ -152,7 +152,9 @@ def main(argv: list[str] | None = None) -> int:
         updates=updates,
         history=history,
         diagnose=diagnose.report_text,  # 在主程式裡跑診斷（不再另外發 diagnose.exe）
-        download_update=lambda state, folder: download_update(update_transport, state, folder),
+        download_update=lambda state, folder, on_percent: download_update(
+            update_transport, state, folder, on_percent
+        ),
         # 「立即更新」啟動的新版才通知「已更新」；能跑到這裡代表更新成功
         updated_to=__version__ if replaced is not None and current_exe is not None else None,
     )

@@ -12,13 +12,14 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import logging
+from collections.abc import Callable
 from enum import Enum
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
 from usage_monitor.core import app_info
 from usage_monitor.core.errors import PollError
-from usage_monitor.core.interfaces import Transport
+from usage_monitor.core.interfaces import Progress, Transport
 from usage_monitor.services.update_check import UpdateState
 
 log = logging.getLogger(__name__)
@@ -31,6 +32,8 @@ REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 class InstallStatus(Enum):
     IDLE = "idle"
     DOWNLOADING = "downloading"
+    STARTING = "starting"
+    """下載核對完成，正在啟動新版（舊版接著結束）。"""
     FAILED = "failed"
 
 
@@ -46,7 +49,9 @@ def _allowed(url: str) -> bool:
     )
 
 
-def fetch(transport: Transport, url: str, user_agent: str) -> bytes:
+def fetch(
+    transport: Transport, url: str, user_agent: str, on_progress: Progress | None = None
+) -> bytes:
     """GET 一個 Release 附件，自己跟隨轉址（只到允許的主機）。"""
     for _ in range(MAX_REDIRECTS + 1):
         if not _allowed(url):
@@ -56,6 +61,7 @@ def fetch(transport: Transport, url: str, user_agent: str) -> bytes:
                 url,
                 {"User-Agent": user_agent, "Accept": "application/octet-stream"},
                 timeout=TIMEOUT,
+                on_progress=on_progress,
             )
         except PollError as e:
             raise InstallError(f"下載連線失敗：{e}") from e
@@ -80,8 +86,16 @@ def expected_hash(sums: bytes, name: str) -> str | None:
     return None
 
 
-def download_update(transport: Transport, state: UpdateState, target_dir: Path) -> Path:
-    """下載並核對新版 exe，放到 target_dir；回傳新檔案路徑。失敗丟 InstallError。"""
+def download_update(
+    transport: Transport,
+    state: UpdateState,
+    target_dir: Path,
+    on_percent: Callable[[int], None] | None = None,
+) -> Path:
+    """下載並核對新版 exe，放到 target_dir；回傳新檔案路徑。失敗丟 InstallError。
+
+    `on_percent`：exe 下載的百分比（0–100，背景執行緒呼叫）；伺服器沒給大小時不回報。
+    """
     version = state.latest_version
     if version is None or state.exe_url is None or state.sums_url is None:
         raise InstallError("Release 沒有可下載的 exe 或 SHA256SUMS.txt")
@@ -92,7 +106,12 @@ def download_update(transport: Transport, state: UpdateState, target_dir: Path) 
     expected = expected_hash(sums, name)
     if expected is None:
         raise InstallError(f"SHA256SUMS.txt 裡沒有 {name}")
-    body = fetch(transport, state.exe_url, user_agent)
+
+    def progress(received: int, total: int | None) -> None:
+        if on_percent is not None and total:
+            on_percent(min(100, received * 100 // total))
+
+    body = fetch(transport, state.exe_url, user_agent, progress)
     actual = hashlib.sha256(body).hexdigest()
     if actual != expected:
         raise InstallError(f"{name} 的 SHA-256 不符")

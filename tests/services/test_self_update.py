@@ -134,3 +134,9 @@ def test_expected_hash_parsing() -> None:
     assert expected_hash(text, "a.exe") == "abc123"
     assert expected_hash(text, "b.exe") == "def456"
     assert expected_hash(text, "c.exe") is None
+
+
+def test_reports_percent_of_the_exe_only(tmp_path: Path) -> None:
+    percents: list[int] = []
+    download_update(transport(), state(), tmp_path, on_percent=percents.append)
+    assert percents == [100]  # FakeTransport 一次給完；SHA256SUMS.txt 不算進度

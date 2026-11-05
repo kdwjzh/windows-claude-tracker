@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from usage_monitor.core.interfaces import Response, Token
+from usage_monitor.core.interfaces import Progress, Response, Token
 from usage_monitor.core.models import Usage
 
 
@@ -48,9 +48,18 @@ class FakeTransport:
         self._queues.setdefault((method.upper(), url), deque()).extend(results)
         return self
 
-    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response:
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str],
+        timeout: float,
+        on_progress: Progress | None = None,
+    ) -> Response:
         self.calls.append(Call("GET", url, dict(headers), timeout=timeout))
-        return self._next("GET", url)
+        resp = self._next("GET", url)
+        if on_progress is not None and resp.status == 200:
+            on_progress(len(resp.body), len(resp.body))  # 一次給完
+        return resp
 
     def post(self, url: str, headers: Mapping[str, str], json: Any, timeout: float) -> Response:
         self.calls.append(Call("POST", url, dict(headers), json=json, timeout=timeout))

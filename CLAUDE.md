@@ -247,7 +247,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": 「自動（最近使用的）」/ "Auto (most recently used)" / Claude / Codex)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
-- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
+- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0… 45%" (percent shown when the server reports the size) / "Starting v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
 
 **Window attributes**
@@ -295,6 +295,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 - Shown only in the packaged exe (`sys.frozen`), when the release has `ClaudeUsageTracker-vX.Y.Z.exe` and `SHA256SUMS.txt` among its `assets[]`; their `browser_download_url` must start with `https://github.com/kdwjzh/windows-claude-tracker/releases/download/` (`app_info.DOWNLOAD_PREFIX`), otherwise they're ignored. Running from source only offers "Download"
 - On press (background thread): download `SHA256SUMS.txt`, then the exe; redirects are followed by hand (at most 5), only over https to `github.com` and `*.githubusercontent.com`; the shared `RequestsTransport` still never follows redirects. The SHA-256 is checked in memory before anything is written; then the file is written as `<name>.download` in the running exe's folder and renamed to `ClaudeUsageTracker-vX.Y.Z.exe`
+- While downloading, the About status shows the exe's percentage (`Transport.get(on_progress=…)` streams 200 responses in 64 KiB chunks; added 2026-11-06). After the check passes it shows 「正在啟動 v…」/ "Starting v…" and waits 100 ms so that text is drawn before starting the new exe
 - Then (main thread): start the new exe with `--replaced <old exe path>` (`CREATE_NO_WINDOW`, `PYINSTALLER_RESET_ENVIRONMENT=1` so the new onefile exe unpacks on its own), and quit
 - The new exe waits up to 15 seconds for the single-instance mutex, then (background thread) deletes the old exe: only when it's in the same folder, isn't itself and its name matches `ClaudeUsageTracker*.exe`; retries for about 10 seconds while the file is locked, and only logs when it can't. `autostart.sync_command()` already points "Start with Windows" at the new exe
 - Once running, the new exe shows one notification 「用量監控已更新到 vX.Y.Z」/ "Usage Monitor updated to vX.Y.Z" (clicking it opens About); only when started with `--replaced` from the packaged exe, so only after a successful update (added 2026-11-06)
@@ -468,7 +469,13 @@ class CredentialSource(Protocol):
 
 
 class Transport(Protocol):
-    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response: ...
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str],
+        timeout: float,
+        on_progress: Progress | None = None,  # (received bytes, total or None); 200 responses only
+    ) -> Response: ...
     def post(self, url: str, headers: Mapping[str, str], json: Any, timeout: float) -> Response: ...
 
 

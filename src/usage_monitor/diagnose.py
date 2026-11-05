@@ -27,7 +27,7 @@ from usage_monitor import __version__
 from usage_monitor.core import i18n, timefmt
 from usage_monitor.core.errors import ErrKind, PollError
 from usage_monitor.core.i18n import LANGUAGE_CHOICES, Lang, resolve_language, t
-from usage_monitor.core.interfaces import Clock, Provider, Response, Transport
+from usage_monitor.core.interfaces import Clock, Progress, Provider, Response, Transport
 from usage_monitor.core.json_access import as_dict, as_str, parse_unix_ms
 from usage_monitor.core.models import Window
 from usage_monitor.platform import oscrypt, paths
@@ -401,8 +401,14 @@ class RecordingTransport:
         self._inner = inner
         self.responses: list[Response] = []
 
-    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response:
-        resp = self._inner.get(url, headers, timeout)
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str],
+        timeout: float,
+        on_progress: Progress | None = None,
+    ) -> Response:
+        resp = self._inner.get(url, headers, timeout, on_progress)
         self.responses.append(resp)
         return resp
 

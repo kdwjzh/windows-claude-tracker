@@ -61,8 +61,11 @@ log = logging.getLogger(__name__)
 HOTKEY_ID = 0x5531
 ABOUT_PAGE = 3
 
-DownloadUpdate = Callable[[UpdateState, Path], Path]
-"""下載並核對新版 exe 到指定資料夾，回傳新檔路徑；失敗丟 InstallError（bootstrap 注入）。"""
+DownloadUpdate = Callable[[UpdateState, Path, Callable[[int], None]], Path]
+"""下載並核對新版 exe 到指定資料夾（第三個參數收下載百分比），回傳新檔路徑；
+失敗丟 InstallError（bootstrap 注入）。"""
+RELAUNCH_DELAY_MS = 100
+"""先讓「正在啟動」畫出來，再啟動新版。"""
 
 
 class _NativeFilter(QAbstractNativeEventFilter):
@@ -111,6 +114,8 @@ def screen_infos() -> list[placement.ScreenInfo]:
 
 
 class Controller(QObject):
+    install_progress = Signal(int)
+    """「立即更新」下載百分比（數字有變才送；queued 送回主執行緒）。"""
     install_finished = Signal(object)
     """「立即更新」背景下載結束：新 exe 的 Path，失敗是 None（queued 送回主執行緒）。"""
 
@@ -150,6 +155,7 @@ class Controller(QObject):
         self._diagnose_window: DiagnoseWindow | None = None
         self._download_update = download_update
         self._install_status = InstallStatus.IDLE
+        self._install_percent: int | None = None
         self._updated_to = updated_to
         """「立即更新」啟動的新版：自己的版本號，啟動後通知一次「已更新到 vX」。"""
         self._on_notification_click: Callable[[], None] = self.run_diagnose
@@ -174,6 +180,7 @@ class Controller(QObject):
 
         self._bridge = Bridge(states, settings_store, updates)
         self._bridge.update_changed.connect(self._on_update)
+        self.install_progress.connect(self._on_install_progress)
         self.install_finished.connect(self._on_install_finished)
         self._bridge.state_changed.connect(self._on_state)
         self._bridge.settings_changed.connect(self._on_settings)
@@ -409,6 +416,10 @@ class Controller(QObject):
         return self._install_status
 
     @property
+    def install_percent(self) -> int | None:
+        return self._install_percent
+
+    @property
     def can_install_update(self) -> bool:
         """「立即更新」可用：打包版、有注入下載函式、Release 有 exe 與 SHA256SUMS.txt。"""
         state = self.update_state
@@ -424,14 +435,22 @@ class Controller(QObject):
     def install_update(self) -> None:
         """「立即更新」：背景下載並核對，完成後（主執行緒）啟動新版並結束自己。"""
         state, exe, download = self.update_state, relaunch.frozen_exe(), self._download_update
-        if not self.can_install_update or self._install_status is InstallStatus.DOWNLOADING:
+        busy = (InstallStatus.DOWNLOADING, InstallStatus.STARTING)
+        if not self.can_install_update or self._install_status in busy:
             return
         assert state is not None and exe is not None and download is not None
+        self._install_percent = None
         self._set_install_status(InstallStatus.DOWNLOADING)
+        last: list[int] = []
+
+        def report(percent: int) -> None:  # 背景執行緒
+            if not last or last[-1] != percent:
+                last.append(percent)
+                self.install_progress.emit(percent)
 
         def work() -> None:
             try:
-                new_exe: Path | None = download(state, exe.parent)
+                new_exe: Path | None = download(state, exe.parent, report)
             except InstallError as e:
                 log.warning("更新失敗：%s", e)
                 new_exe = None
@@ -442,17 +461,27 @@ class Controller(QObject):
 
         threading.Thread(target=work, name="self-update", daemon=True).start()
 
+    def _on_install_progress(self, percent: int) -> None:
+        self._install_percent = percent
+        if self._dialog is not None:
+            self._dialog.refresh_update()
+
     def _on_install_finished(self, new_exe: object) -> None:
         exe = relaunch.frozen_exe()
         if isinstance(new_exe, Path) and exe is not None:
-            try:
-                relaunch.start_replacement(new_exe, exe)
-            except OSError as e:
-                log.warning("無法啟動新版：%s", type(e).__name__)
-            else:
-                self.quit()
-                return
+            self._set_install_status(InstallStatus.STARTING)
+            QTimer.singleShot(RELAUNCH_DELAY_MS, lambda: self._relaunch(new_exe, exe))
+            return
         self._set_install_status(InstallStatus.FAILED)
+
+    def _relaunch(self, new_exe: Path, exe: Path) -> None:
+        try:
+            relaunch.start_replacement(new_exe, exe)
+        except OSError as e:
+            log.warning("無法啟動新版：%s", type(e).__name__)
+            self._set_install_status(InstallStatus.FAILED)
+            return
+        self.quit()
 
     def _set_install_status(self, status: InstallStatus) -> None:
         self._install_status = status

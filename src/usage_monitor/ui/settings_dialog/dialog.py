@@ -94,6 +94,8 @@ class SettingsHost(Protocol):
     def can_install_update(self) -> bool: ...
     @property
     def install_status(self) -> InstallStatus: ...
+    @property
+    def install_percent(self) -> int | None: ...
     def install_update(self) -> None: ...
     def skip_update(self) -> None: ...
     def open_url(self, url: str) -> None: ...
@@ -350,10 +352,12 @@ class SettingsDialog(QWidget):
         install = self._host.install_status
         if install is InstallStatus.FAILED:
             name = "statusError"
-        self.version_card.set_subtitle(update_status_text(state, self._lang, install), name)
+        text = update_status_text(state, self._lang, install, self._host.install_percent)
+        self.version_card.set_subtitle(text, name)
         alert = state is not None and state.should_alert
         self.update_install.setVisible(alert and self._host.can_install_update)
-        self.update_install.setEnabled(install is not InstallStatus.DOWNLOADING)
+        busy = install in (InstallStatus.DOWNLOADING, InstallStatus.STARTING)
+        self.update_install.setEnabled(not busy)
         self.update_download.setVisible(alert)
         self.update_skip.setEnabled(alert)
         self.skip_card.setVisible(alert)

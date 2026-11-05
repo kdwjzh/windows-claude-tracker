@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -93,8 +93,10 @@ def app(qapp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple
     downloads: list[tuple[UpdateState, Path]] = []
     quits: list[int] = []
 
-    def download(update: UpdateState, folder: Path) -> Path:
+    def download(update: UpdateState, folder: Path, on_percent: Callable[[int], None]) -> Path:
         downloads.append((update, folder))
+        for p in (0, 0, 50, 100):  # 同一個百分比重複回報只送一次給畫面
+            on_percent(p)
         if update.latest_version == "9.9.9":
             raise InstallError("SHA-256 不符")
         return folder / app_info.exe_name(update.latest_version or "")
@@ -227,13 +229,20 @@ def test_install_downloads_then_starts_new_version_and_quits(app, packaged, qtbo
     dialog = controller._dialog  # pyright: ignore[reportPrivateUsage]
     assert dialog is not None and not dialog.update_install.isHidden()
 
+    percents: list[int] = []
+    controller.install_progress.connect(percents.append)
     with qtbot.waitSignal(controller.install_finished, timeout=5000):
         dialog.update_install.click()
         assert controller.install_status is InstallStatus.DOWNLOADING
     ((state, folder),) = controller.test_downloads
     assert folder == exe.parent and state.latest_version == "1.0.0"
+    assert percents == [0, 50, 100]
+    # 先顯示「正在啟動」讓畫面重畫，再啟動新版（2026-11-06：之前畫面停在「正在下載」看不出進度）
+    assert controller.install_status is InstallStatus.STARTING
+    assert dialog.version_card.subtitle.text() == "正在啟動 v1.0.0…"
+    assert not dialog.update_install.isEnabled()
+    qtbot.waitUntil(lambda: controller.test_quits == [1], timeout=5000)
     assert started == [(exe.parent / "ClaudeUsageTracker-v1.0.0.exe", exe)]
-    assert controller.test_quits == [1]
 
 
 @pytest.mark.qt

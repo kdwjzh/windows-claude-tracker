@@ -546,3 +546,21 @@ def test_tray_icon_auto_tie_keeps_order_and_nothing_loaded() -> None:
     same = {"claude": ok("claude", CLAUDE_NORMAL), "codex": ok("codex", CLAUDE_NORMAL)}
     assert _tray_bars("auto", same)[0] == TrayBar(42, Level.OK)
     assert _tray_bars("auto", {}) == (None, None)
+
+
+def test_update_status_shows_percent_and_starting() -> None:
+    from usage_monitor.core.i18n import Lang
+    from usage_monitor.services.self_update import InstallStatus
+    from usage_monitor.services.update_check import UpdateState, UpdateStatus
+    from usage_monitor.ui.viewmodel import update_status_text
+
+    s = UpdateState("1.3.0", UpdateStatus.AVAILABLE, "1.4.0")
+    assert update_status_text(s, Lang.ZH_TW, InstallStatus.DOWNLOADING) == "正在下載 v1.4.0…"
+    assert (
+        update_status_text(s, Lang.ZH_TW, InstallStatus.DOWNLOADING, 45) == "正在下載 v1.4.0… 45%"
+    )
+    assert (
+        update_status_text(s, Lang.EN, InstallStatus.DOWNLOADING, 45) == "Downloading v1.4.0… 45%"
+    )
+    assert update_status_text(s, Lang.ZH_TW, InstallStatus.STARTING) == "正在啟動 v1.4.0…"
+    assert update_status_text(s, Lang.EN, InstallStatus.STARTING) == "Starting v1.4.0…"

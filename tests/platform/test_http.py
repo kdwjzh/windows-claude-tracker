@@ -71,3 +71,46 @@ def test_network_errors_become_transient_without_details(exc: BaseException, mes
     assert info.value.kind is ErrKind.TRANSIENT
     assert info.value.message == message
     assert "secret" not in str(info.value)
+
+
+def _streamed(status: int, body: bytes, length: str | None) -> Any:
+    import io
+
+    r = requests.Response()
+    r.status_code = status
+    r.raw = io.BytesIO(body)
+    if length is not None:
+        r.headers["Content-Length"] = length
+    return r
+
+
+def test_get_reports_download_progress() -> None:
+    body = b"x" * 200_000
+    session = StubSession(_streamed(200, body, str(len(body))))
+    seen: list[tuple[int, int | None]] = []
+    resp = RequestsTransport(session).get(
+        "https://github.com/a", {}, timeout=30, on_progress=lambda n, total: seen.append((n, total))
+    )
+    assert resp.body == body
+    assert session.kwargs["stream"] is True
+    assert seen[0] == (0, len(body)) and seen[-1] == (len(body), len(body))
+    assert len(seen) > 2  # 分段回報，不是只在最後
+
+
+@pytest.mark.parametrize(("status", "length"), [(302, "10"), (200, None), (200, "abc")])
+def test_progress_only_with_known_size_on_200(status: int, length: str | None) -> None:
+    """轉址的小回應不回報（不然進度會跳到 100% 再歸零）；沒有大小時給 None。"""
+    seen: list[tuple[int, int | None]] = []
+    RequestsTransport(StubSession(_streamed(status, b"0123456789", length))).get(
+        "https://github.com/a", {}, timeout=30, on_progress=lambda n, total: seen.append((n, total))
+    )
+    if status != 200:
+        assert seen == []
+    else:
+        assert seen and all(total is None for _n, total in seen)
+
+
+def test_get_without_progress_does_not_stream() -> None:
+    session = StubSession(_response(200))
+    RequestsTransport(session).get("https://github.com/a", {}, timeout=30)
+    assert session.kwargs["stream"] is False

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
@@ -78,10 +78,22 @@ class CredentialSource(Protocol):
         ...
 
 
+Progress = Callable[[int, "int | None"], None]
+"""下載進度：(已收到的位元組, 總大小)；伺服器沒給大小時總大小是 None。"""
+
+
 class Transport(Protocol):
     """HTTP 傳輸。連線失敗或逾時時丟 PollError(ErrKind.TRANSIENT)。"""
 
-    def get(self, url: str, headers: Mapping[str, str], timeout: float) -> Response: ...
+    def get(
+        self,
+        url: str,
+        headers: Mapping[str, str],
+        timeout: float,
+        on_progress: Progress | None = None,
+    ) -> Response:
+        """`on_progress`：只有 200 回應會分段回報下載進度（「立即更新」用）。"""
+        ...
 
     def post(self, url: str, headers: Mapping[str, str], json: Any, timeout: float) -> Response: ...
 
