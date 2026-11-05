@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v1.3.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v2.0.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
