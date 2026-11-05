@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 pytest.importorskip("pytestqt")
+pytest.importorskip("PySide6.QtGui")  # ubuntu CI 沒有 libEGL：整個檔案略過，改在 windows CI 跑
 
 from PySide6.QtGui import QGuiApplication
 
