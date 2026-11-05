@@ -10,7 +10,8 @@ from __future__ import annotations
 import pytest
 
 pytest.importorskip("pytestqt")
-pytest.importorskip("PySide6.QtGui")  # ubuntu CI 沒有 libEGL：整個檔案略過，改在 windows CI 跑
+# ubuntu CI 沒有 libEGL：整個檔案略過，改在 windows CI 跑（pytest 9 預設只略過找不到模組）
+pytest.importorskip("PySide6.QtGui", exc_type=ImportError)
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QCloseEvent
