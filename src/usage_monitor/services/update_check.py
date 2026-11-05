@@ -30,6 +30,8 @@ log = logging.getLogger(__name__)
 STARTUP_DELAY = timedelta(seconds=30)
 CHECK_INTERVAL = timedelta(hours=24)
 IDLE_WAKE = timedelta(hours=1)
+REMIND_INTERVAL = timedelta(hours=23)
+"""同一版再次通知的間隔：每 24 小時的檢查可能比上次通知早幾秒，留 1 小時餘裕。"""
 """自動檢查關閉時，多久醒來一次看看設定有沒有被打開。"""
 TIMEOUT = 30.0
 
@@ -82,6 +84,15 @@ def _asset_url(assets: object, name: str) -> str | None:
     return None
 
 
+def _remind_due(notified_at: str | None, now: datetime) -> bool:
+    """上次通知超過 REMIND_INTERVAL；沒有紀錄（舊設定）、看不懂或在未來（時鐘被改過）都算該提醒。"""
+    try:
+        last = datetime.fromisoformat(notified_at) if notified_at else None
+    except ValueError:
+        return True
+    return last is None or last.tzinfo is None or not last <= now < last + REMIND_INTERVAL
+
+
 class UpdateChecker:
     def __init__(
         self,
@@ -130,14 +141,20 @@ class UpdateChecker:
         self._set_state(replace(self._state, skipped=True))
 
     def claim_notification(self) -> str | None:
-        """該不該發 Windows 通知：每個新版本只回傳一次版本號，並記在設定裡。"""
+        """該不該發 Windows 通知：新版本立刻通知，同一版大約每天再提醒一次（2026-11-06 改）。
+
+        回傳版本號時順便記下版本與時間，重開程式也不會馬上再通知。
+        """
         state = self._state
         version = state.latest_version
         if not state.should_alert or version is None:
             return None
-        if self._settings.current.update_check.notified_version == version:
+        now = self._clock.now()
+        current = self._settings.current.update_check
+        if current.notified_version == version and not _remind_due(current.notified_at, now):
             return None
-        self._update_settings(lambda u: replace(u, notified_version=version))
+        stamp = now.isoformat()
+        self._update_settings(lambda u: replace(u, notified_version=version, notified_at=stamp))
         return version
 
     def start(self) -> None:

@@ -48,7 +48,9 @@ class UpdateCheckSettings:
     last_checked_at: str | None = None
     """最後一次成功連上 GitHub 的時間（ISO 8601，UTC）。"""
     notified_version: str | None = None
-    """已經發過 Windows 通知的版本；每個新版本只通知一次。"""
+    """最近一次發 Windows 通知的版本。"""
+    notified_at: str | None = None
+    """最近一次發新版通知的時間（ISO 8601，UTC）；同一版大約每天提醒一次。"""
 
 
 @dataclass(frozen=True)
@@ -209,4 +211,5 @@ def _update_check_from_dict(raw: object, warnings: list[str]) -> UpdateCheckSett
         skipped_version=r.optional_text("skipped_version"),
         last_checked_at=r.optional_text("last_checked_at"),
         notified_version=r.optional_text("notified_version"),
+        notified_at=r.optional_text("notified_at"),
     )

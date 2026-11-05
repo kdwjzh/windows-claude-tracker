@@ -15,6 +15,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- The new-version notification now repeats about once a day (at most every 23 hours, also across restarts) until you update or skip that version, instead of only once per version. Settings gain `update_check.notified_at`; older settings files simply get one more reminder
 - `Transport.get` takes an optional `on_progress` callback (received bytes, total size) that reports download progress for 200 responses; `RequestsTransport` streams the body in 64 KiB chunks when it's given. Every implementation (including the test fake and the diagnostics recorder) was updated
 - The tray menu's "New version vX.Y.Z →" item and the new-version notification now open Settings → About (where "Update now" is) instead of the Release page
 - Diagnostics now run inside the app, and each release ships a single exe (no more `diagnose-vX.Y.Z.exe`). Settings → Advanced → "Run diagnostics" and clicking a sign-in error notification open a diagnostics window that shows the full report (monospace, scrollable, selectable) with "Copy" and "Run again" buttons; it runs in the background and shows "Running diagnostics…" meanwhile. Before, the separate exe was often missing and the button only showed an unreadable command-prompt error. `python -m usage_monitor.diagnose` (with `--lang`, `--poll`, `--no-api`, `--debug`) still works in a terminal

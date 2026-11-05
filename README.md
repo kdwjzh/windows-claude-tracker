@@ -34,7 +34,7 @@ On first run, Windows SmartScreen may say "Windows protected your PC" (the exe i
 
 ### Updating
 
-When a new version is out, a blue dot appears at the bottom right of the tray icon, the tray menu gets a "New version vX.Y.Z →" item at the top, and you get one notification. Clicking either opens Settings → About.
+When a new version is out, a blue dot appears at the bottom right of the tray icon, the tray menu gets a "New version vX.Y.Z →" item at the top, and you get a notification, repeated about once a day until you update or press "Skip this version". Clicking either opens Settings → About.
 
 Press "Update now" there: the app downloads the new exe from GitHub Releases into the same folder as the current one, checks its SHA-256 against the release's `SHA256SUMS.txt`, starts it and quits; the new version then deletes the old exe. Nothing is downloaded until you press the button. Your settings and usage history carry over, and "Start with Windows" switches to the new exe automatically.
 
@@ -80,7 +80,7 @@ Location: `%APPDATA%\MyUsageMonitor\settings.json`. Prefer the Settings window (
 | `widget.theme` | `"system"` | `"system"` (follow Windows), `"dark"`, `"light"` |
 | `update_check.enabled` | `true` | Check GitHub for the latest version 30 seconds after start and every 24 hours (connects only to `api.github.com` and sends no personal data); when off, only "Check for updates" in About checks |
 | `update_check.skipped_version` | `null` | Version saved by "Skip this version"; you won't be reminded about it again |
-| `update_check.last_checked_at` / `notified_version` | `null` | Maintained by the app: time of the last successful check, and the version already notified |
+| `update_check.last_checked_at` / `notified_version` / `notified_at` | `null` | Maintained by the app: time of the last successful check, and the version and time of the last new-version notification |
 
 ## Troubleshooting
 

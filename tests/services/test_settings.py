@@ -47,6 +47,7 @@ def test_defaults_match_spec() -> None:
             "skipped_version": None,
             "last_checked_at": None,
             "notified_version": None,
+            "notified_at": None,  # 2026-11-06：同一版每天提醒一次
         },
     }
 

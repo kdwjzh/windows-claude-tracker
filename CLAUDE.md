@@ -287,7 +287,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - When: once 30 seconds after start, then every 24 hours, and immediately when "Check for updates" is pressed on the About page; `update_check.enabled` defaults to `true`, and when it's `false` only the manual button checks
 - "Skip this version": stored in `update_check.skipped_version`; that version isn't reminded again, newer versions still are
 - Errors: 404 (no Release yet or the API is temporarily unavailable), 403/429 (API rate limit) and network errors → status "Can't check right now", **no notification and no error icon**, a debug log entry only
-- When a new version exists: an extra tray menu item + blue dot (§3.7); the Windows notification appears **once per new version**
+- When a new version exists: an extra tray menu item + blue dot (§3.7); the Windows notification appears when it's first found and then **about once a day** (at most every 23 hours, checked with `update_check.notified_version` + `notified_at`) until the user updates or skips that version (revised 2026-11-06; previously once per version)
 - "Download" opens the Release page (`html_url`)
 - The notification click and the tray item open Settings → About (revised 2026-11-05)
 

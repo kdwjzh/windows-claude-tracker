@@ -34,7 +34,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 ### 更新到新版
 
-有新版本時，系統匣圖示右下角會出現藍點、系統匣選單最上面會多一行「有新版本 vX.Y.Z →」，並跳出一次通知。點選單項目或通知都會開啟「設定 → 關於」。
+有新版本時，系統匣圖示右下角會出現藍點、系統匣選單最上面會多一行「有新版本 vX.Y.Z →」，並跳出通知；在你更新或按「略過這個版本」之前，大約每天提醒一次。點選單項目或通知都會開啟「設定 → 關於」。
 
 在那裡按「立即更新」：程式會從 GitHub Releases 把新版 exe 下載到目前 exe 所在的資料夾，用 Release 附的 `SHA256SUMS.txt` 核對 SHA-256，然後啟動新版、舊版結束；新版會刪掉舊的 exe。沒按按鈕就不會下載任何東西。設定與用量紀錄都會沿用，「開機時啟動」也會自動改成指向新的 exe。
 
@@ -80,7 +80,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 | `widget.theme` | `"system"` | `"system"`（跟隨 Windows）、`"dark"`、`"light"` |
 | `update_check.enabled` | `true` | 啟動 30 秒後與每 24 小時查一次 GitHub 上的最新版本（只連 `api.github.com`，不傳送任何個人資料）；關閉後只有在「關於」頁按「檢查更新」才會查 |
 | `update_check.skipped_version` | `null` | 「略過這個版本」記下的版本，該版本不再提醒 |
-| `update_check.last_checked_at`／`notified_version` | `null` | 程式自己維護：最後一次成功檢查的時間、已經通知過的版本 |
+| `update_check.last_checked_at`／`notified_version`／`notified_at` | `null` | 程式自己維護：最後一次成功檢查的時間、最近一次新版通知的版本與時間 |
 
 ## 常見問題
 

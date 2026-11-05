@@ -286,3 +286,55 @@ def test_settings_write_failure_is_contained(
 def test_stop_without_start(tmp_path: Path) -> None:
     Harness(tmp_path).checker.stop()
     assert T0 + timedelta(0) == T0
+
+
+def test_notification_repeats_about_once_a_day(tmp_path: Path) -> None:
+    """2026-11-06 改：同一版不再只通知一次，有新版時大約每天提醒一次（Jimmy 要求）。"""
+    h = Harness(tmp_path, *(release("v1.0.0") for _ in range(4)))
+    h.checker.check()
+    assert h.checker.claim_notification() == "1.0.0"
+    assert h.store.current.update_check.notified_at == T0.isoformat()
+    h.clock.advance(hours=12)
+    h.checker.check()
+    assert h.checker.claim_notification() is None  # 同一天不再吵
+    h.clock.advance(hours=12)  # 下一次每 24 小時的檢查（可能比上次通知早幾秒）
+    h.checker.check()
+    assert h.checker.claim_notification() == "1.0.0"
+    h.checker.skip_latest()
+    h.clock.advance(days=2)
+    h.checker.check()
+    assert h.checker.claim_notification() is None  # 略過的版本不提醒
+
+
+def test_daily_reminder_survives_restart_and_old_settings(tmp_path: Path) -> None:
+    h = Harness(tmp_path, release("v1.0.0"))
+    h.checker.check()
+    assert h.checker.claim_notification() == "1.0.0"
+    later = Harness(tmp_path, release("v1.0.0"))
+    later.clock.advance(hours=23, minutes=30)  # 隔天重開程式
+    later.checker.check()
+    assert later.checker.claim_notification() == "1.0.0"
+    # 舊版設定只有 notified_version、沒有 notified_at：當成該提醒了
+    later.store.update(
+        lambda st: replace(st, update_check=replace(st.update_check, notified_at=None))
+    )
+    later.transport.add("GET", app_info.LATEST_RELEASE_API, release("v1.0.0"))
+    later.checker.check()
+    assert later.checker.claim_notification() == "1.0.0"
+
+
+@pytest.mark.parametrize(
+    ("notified_at", "due"),
+    [
+        (None, True),
+        ("not a time", True),
+        ("2026-10-30T09:00:00", True),  # 沒有時區：看不懂就提醒
+        ((T0 - timedelta(hours=1)).isoformat(), False),
+        ((T0 - timedelta(hours=23)).isoformat(), True),
+        ((T0 + timedelta(hours=1)).isoformat(), True),  # 在未來：時鐘被改過
+    ],
+)
+def test_remind_due(notified_at: str | None, due: bool) -> None:
+    from usage_monitor.services.update_check import _remind_due  # pyright: ignore[reportPrivateUsage]
+
+    assert _remind_due(notified_at, T0) is due
