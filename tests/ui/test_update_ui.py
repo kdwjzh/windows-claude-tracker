@@ -253,3 +253,34 @@ def test_install_failure_shows_message_and_keeps_running(app, packaged, qtbot) -
     assert dialog.version_card.subtitle.text() == "更新失敗，請按「前往下載」手動更新"
     assert dialog.update_install.isEnabled()  # 可以再試一次
     assert started == [] and controller.test_quits == []
+
+
+@pytest.mark.qt
+@pytest.mark.parametrize("updated_to", ["1.0.0", None])
+def test_updated_notification_only_after_update(
+    qapp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, updated_to: str | None
+) -> None:
+    """「立即更新」啟動的新版（--replaced）才通知「已更新到 vX」；平常啟動不通知。"""
+    from usage_monitor.ui.controller import Controller
+
+    store = SettingsStore(tmp_path / "settings.json")
+    store.load()
+    store.update(lambda s: replace(s, language="zh-TW"))
+    controller = Controller(
+        qapp, store, StateStore(), [("claude", "Claude")], FakeClock(NOW),
+        refresh=lambda: None, log_file=tmp_path / "m.log", on_quit=lambda: None,
+        updated_to=updated_to,
+    )  # fmt: skip
+    notes: list[tuple[str, str]] = []
+    monkeypatch.setattr(controller.tray, "notify", lambda t, b: notes.append((t, b)))
+    controller.start()
+    try:
+        if updated_to is None:
+            assert notes == []
+            return
+        assert notes == [("用量監控已更新到 v1.0.0", "新版本已經在執行，點這則通知查看。")]
+        controller.tray.notification_clicked.emit()  # 點通知 → 「關於」頁
+        dialog = controller._dialog  # pyright: ignore[reportPrivateUsage]
+        assert dialog is not None and dialog.nav.currentRow() == 3
+    finally:
+        controller.shutdown()

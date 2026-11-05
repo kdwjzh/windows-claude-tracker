@@ -130,6 +130,7 @@ class Controller(QObject):
         history: History | None = None,
         diagnose: RunDiagnostics | None = None,
         download_update: DownloadUpdate | None = None,
+        updated_to: str | None = None,
     ) -> None:
         """`catalog`：所有可用的服務；實際顯示哪些依設定的 providers 決定。"""
         super().__init__()
@@ -149,6 +150,8 @@ class Controller(QObject):
         self._diagnose_window: DiagnoseWindow | None = None
         self._download_update = download_update
         self._install_status = InstallStatus.IDLE
+        self._updated_to = updated_to
+        """「立即更新」啟動的新版：自己的版本號，啟動後通知一次「已更新到 vX」。"""
         self._on_notification_click: Callable[[], None] = self.run_diagnose
         """點通知要做什麼：認證錯誤 → 執行診斷；新版本 → 開「關於」頁。"""
         self._clock = clock
@@ -210,6 +213,12 @@ class Controller(QObject):
         self._apply_visibility()
         self._repaint.start()
         self._housekeeping.start()
+        if self._updated_to is not None:
+            self._on_notification_click = self.open_about
+            self.tray.notify(
+                t(self._lang, "notify_updated_title", version=self._updated_to),
+                t(self._lang, "notify_updated_body"),
+            )
 
     def shutdown(self) -> None:
         self._repaint.stop()

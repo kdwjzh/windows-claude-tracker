@@ -187,6 +187,8 @@ _ZH_TW: dict[str, str] = {
     "update_skip_hint": "不再提醒這個版本；更新的版本仍會提醒",
     "notify_update_title": "用量監控有新版本 v{version}",
     "notify_update_body": "點這則通知查看並更新。",
+    "notify_updated_title": "用量監控已更新到 v{version}",
+    "notify_updated_body": "新版本已經在執行，點這則通知查看。",
     # 診斷工具（diagnose）
     "diag_window_title": "用量監控 · 診斷",
     "diag_window_hint": (
@@ -426,6 +428,8 @@ _EN: dict[str, str] = {
     "update_skip_hint": "Stop reminding me about this version; newer versions still notify",
     "notify_update_title": "Usage Monitor v{version} is available",
     "notify_update_body": "Click this notification to see the update.",
+    "notify_updated_title": "Usage Monitor updated to v{version}",
+    "notify_updated_body": "The new version is running. Click this notification to see it.",
     # Diagnostics (diagnose)
     "diag_window_title": "Usage Monitor · Diagnostics",
     "diag_window_hint": (
