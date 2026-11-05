@@ -9,6 +9,7 @@ import logging
 import sys
 import threading
 from types import TracebackType
+from typing import TYPE_CHECKING
 
 from usage_monitor import __version__, diagnose
 from usage_monitor.core.interfaces import Provider
@@ -28,6 +29,9 @@ from usage_monitor.services.settings.store import SettingsStore
 from usage_monitor.services.state_store import StateStore
 from usage_monitor.services.update_check import UpdateChecker
 
+if TYPE_CHECKING:
+    from PySide6.QtCore import QCoreApplication
+
 log = logging.getLogger("usage_monitor.bootstrap")
 
 
@@ -43,6 +47,13 @@ def _log_thread_exception(args: threading.ExceptHookArgs) -> None:
         args.thread.name if args.thread else "?",
         exc_info=(args.exc_type, args.exc_value or args.exc_type(), args.exc_traceback),
     )
+
+
+def quit_app(app: QCoreApplication) -> None:
+    """結束程式。不用 app.quit()：它會先請所有視窗關閉，儀表板「關閉只是隱藏」會讓 Qt
+    取消結束（看視窗順序，時好時壞；2026-11-05「立即更新」後舊版沒結束）。收尾在 main 的 finally。
+    """
+    app.exit(0)
 
 
 def create_all_providers(clock: SystemClock) -> dict[str, Provider]:
@@ -136,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         clock,
         refresh=scheduler.refresh_now,
         log_file=paths.log_file(),
-        on_quit=app.quit,
+        on_quit=lambda: quit_app(app),
         settings_file=paths.settings_file(),
         updates=updates,
         history=history,
