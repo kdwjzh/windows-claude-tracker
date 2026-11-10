@@ -522,6 +522,7 @@ Scheduler (background thread)
 12. These APIs are undocumented; parsing must tolerate missing fields.
 13. Qt objects are used only on the main thread; background data always arrives through the signals in `ui/bridge.py`.
 14. The widget must never steal focus.
+15. Quitting always goes through `bootstrap.quit_app()`, which calls `app.exit(0)`, **never `app.quit()`**: `quit()` first asks every window to close, and the dashboard and diagnostics window only hide when closed, so depending on Qt's window order the quit was sometimes cancelled ("Update now" then left the old version running). Cleanup runs in `main()`'s `finally` block (`tests/ui/test_quit.py`, fixed 2026-11-06)
 
 ### 5.3 Testing strategy
 
@@ -555,6 +556,7 @@ pytest --cov=usage_monitor --cov-fail-under=90
 - `pre-commit`: runs ruff and gitleaks (secret scanning) before each commit
 - CI (GitHub Actions) runs on pushes and PRs in two jobs: the pure-logic tests for `core` / `providers` / `services` / `viewmodel` on `ubuntu-latest` (starts and runs faster), and the `windows_only` and pytest-qt tests on `windows-latest`
 - pyright: strict mode for `core`, `providers`, `services`; basic for `ui`
+- **Qt test files**: the ubuntu job has no `libEGL`, so importing `PySide6.QtGui` there raises `ImportError`. A test file that imports PySide6 at module level must start with `pytest.importorskip("pytestqt")` and `pytest.importorskip("PySide6.QtGui", exc_type=ImportError)` (pytest 9 only skips a missing module by default), and mark its tests `qt`; it then runs only in the windows job. Missing this broke the ubuntu job from 2026-11-04 to 2026-11-06
 
 ### 5.5 Workflow for Claude Code
 
@@ -590,6 +592,8 @@ Progress and per-version details are in `CHANGELOG.md`.
 | 9 Taskbar embedding | Not done (ADR 0005) | — |
 | 10 App icon and licenses | AppUserModelID + `assets/app.ico`, `THIRD_PARTY_LICENSES.txt`, disclaimer | v0.11.0 |
 | 11 Public release | English docs, the repo made public with a clean history | v1.0.0 |
+| 12 Dashboard and usage history | "Open dashboard", AI services to monitor, continuous bars, service name colors (v1.1.0–v1.3.0); usage history in `history.db` and the Usage page, tray icon following the service in use, sleep/resume refresh (v2.0.0) | v1.1.0–v2.0.0 |
+| 13 Update now and single exe | Diagnostics inside the app, one exe per release (ADR 0006); "Update now" downloads, verifies and swaps the exe in place, with progress and an "updated" notification; daily new-version reminder (ADR 0007) | v2.0.0 |
 
 ### Possible future work
 
