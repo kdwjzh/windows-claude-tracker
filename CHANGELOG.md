@@ -4,6 +4,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-13
+
+Shows per-model weekly limits such as Fable and your plan (Pro, Max, Plus, Free) for each service. From v2.0.0, use Settings → About → "Update now".
+
 ### Added
 
 - Per-model weekly limits such as Fable: the hover card shows one extra line per model (for example 「Fable 94% 今天 20:00 重置（1時00分後） · 最多用每週上限的 50%」), and the tray tooltip adds it when it fits in 127 characters. The widget keeps its two rows. Models are read from the usage API's `weekly_scoped` limits by name, so new ones appear without an app update. `python -m usage_monitor.diagnose` lists them too (ADR 0008)

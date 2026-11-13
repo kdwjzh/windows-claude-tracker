@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v2.0.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v2.1.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
@@ -601,6 +601,7 @@ Progress and per-version details are in `CHANGELOG.md`.
 | 11 Public release | English docs, the repo made public with a clean history | v1.0.0 |
 | 12 Dashboard and usage history | "Open dashboard", AI services to monitor, continuous bars, service name colors (v1.1.0–v1.3.0); usage history in `history.db` and the Usage page, tray icon following the service in use, sleep/resume refresh (v2.0.0) | v1.1.0–v2.0.0 |
 | 13 Update now and single exe | Diagnostics inside the app, one exe per release (ADR 0006); "Update now" downloads, verifies and swaps the exe in place, with progress and an "updated" notification; daily new-version reminder (ADR 0007) | v2.0.0 |
+| 14 Per-model limits and plans | Per-model weekly limits such as Fable in the hover card and tooltip (ADR 0008); plan badges (Pro, Max 5x, Plus, Free) next to the service names | v2.1.0 |
 
 ### Possible future work
 
