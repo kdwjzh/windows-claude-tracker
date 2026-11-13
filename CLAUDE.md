@@ -24,7 +24,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 - No automatic background download: the update check only **checks and reminds**; the new version is downloaded only when the user presses "Update now" in About (§3.9, ADR 0007, revised 2026-11-05). No installer: the app stays a single portable exe
 - No other services such as Antigravity, Cursor, Grok, Copilot or OpenCode (but the architecture must allow adding one without changing existing code, see §4.3)
 - No multiple accounts (one Claude account + one Codex account)
-- No reading `~/.claude/.credentials.json` inside WSL; no per-model weekly limits (`weekly_scoped`) or extra usage (`spend`) (decided 2026-10-31)
+- No reading `~/.claude/.credentials.json` inside WSL; no extra usage (`spend`) (decided 2026-10-31); per-model weekly limits (`weekly_scoped`, for example Fable) are shown in the hover card and tray tooltip only, never as widget rows (revised 2026-11-13, ADR 0008)
 
 ---
 
@@ -104,7 +104,7 @@ anthropic-beta: oauth-2025-04-20
 - `five_hour.utilization`, `seven_day.utilization`: **0–100**; `resets_at`: ISO 8601 (UTC)
 - If `five_hour` / `seven_day` is null, use the `limits[]` item whose `scope` is null and whose `kind` is `session` / `weekly_all` (field `percent`, or its alias `utilization`)
 - Neither window present → treated as a format error
-- Only 5h and 7d are parsed; `weekly_scoped` (per-model weekly limits) and `spend` (extra usage) are not shown (§1)
+- Every `limits[]` item whose `kind` is `weekly_scoped` (per-model weekly limit, for example Fable) becomes a `Usage.scoped` window, labeled with `scope.model.display_name` (items without a name or percentage are skipped), in API order, so a new model shows up without code changes. `weekly_scoped_shares[]` (`limit_index` → position in `limits[]`, `allowance_percent_of_weekly`) fills `Window.share`. `spend` (extra usage) is not shown (§1)
 
 **Fallback** (only when the usage API returns a 4xx other than 401/403/429; 5xx never falls back):
 
@@ -159,7 +159,12 @@ class Window:
     available: bool = False  # the service reported this window (0% counts), as opposed to "no data"
     percent: float = 0.0  # 0–100
     resets_at: datetime | None = None  # UTC aware
-    label: str | None = None  # "5h", "7d", "30d"; the UI uses a default when None
+    label: str | None = (
+        None  # "5h", "7d", "30d", or a model name for scoped limits; the UI uses a default when None
+    )
+    share: float | None = (
+        None  # scoped limits only: the most of the weekly limit this model may use (0–100)
+    )
 
 
 @dataclass(frozen=True)
@@ -167,6 +172,9 @@ class Usage:
     session: Window  # short window (5h)
     long: Window  # long window (7d / 30d)
     fetched_at: datetime
+    scoped: tuple[
+        Window, ...
+    ] = ()  # per-model weekly limits (Claude's weekly_scoped), in API order
 
 
 @dataclass(frozen=True)
@@ -223,7 +231,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 **Interactions (artboard 3)**
 
-- After hovering 0.5 seconds, a detail card appears above the widget: service name, data source, each period's percentage and 「今天 20:20 重置（2時13分後）」/ "Resets today 20:20 (in 2h 13m)", last update time, and 「雙擊立即更新」/ "Double-click to refresh"
+- After hovering 0.5 seconds, a detail card appears above the widget: service name, data source, each period's percentage and 「今天 20:20 重置（2時13分後）」/ "Resets today 20:20 (in 2h 13m)", last update time, and 「雙擊立即更新」/ "Double-click to refresh". Per-model weekly limits (`Usage.scoped`, for example Fable) get one extra line each below the periods, labeled with the model name, with 「 · 最多用每週上限的 50%」/ " · up to 50% of the weekly limit" when the API reports a share (added 2026-11-13)
 - Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
 - While dragging, show a blue outline `#7fb3ff`; on release within 12 px of a work-area edge, snap to it (8 px from the edge after snapping)
 - Show/hide: tray left-click, the shortcut (`Ctrl+Alt+U` by default, changeable in Settings), or the context menu. Auto-hide in full screen: a maximized window **with a title bar** isn't full screen (even when its rectangle covers the screen, for example with an auto-hiding taskbar), while a window **without a title bar** that covers the whole screen is, maximized or not — such as a video in full screen in a maximized browser (`platform/fullscreen.is_fullscreen_window`, revised 2026-11-04); a manual hide is never undone by leaving full screen
@@ -234,7 +242,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Icon: 64×64 dark rounded square, top bar 5h, bottom bar 7d, same color rules as above
   - **Red dot** = needs action (not signed in, expired, rejected)
   - **Gray dot** = stale data (temporarily unreachable)
-- Tooltip: one line per service, for example `Claude 5h 42% · 2時13分 | 7d 18% · 4天3時`, **at most 127 characters** in total
+- Tooltip: one line per service, for example `Claude 5h 42% · 2時13分 | 7d 18% · 4天3時 | Fable 94% · 1時00分`, **at most 127 characters** in total; per-model limits are appended only when the whole tooltip still fits, otherwise all of them are left out (the hover card always has them). The tray icon still draws only the short and long periods
 - Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
   - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens Settings → About (revised 2026-11-05, ADR 0007); the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
 - Windows notifications appear only when action is needed, once per error type; buttons "Run diagnostics" and "Close". A temporary network outage never notifies

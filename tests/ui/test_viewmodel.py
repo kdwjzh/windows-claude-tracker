@@ -353,6 +353,53 @@ def test_tooltip_truncated_to_127() -> None:
     assert truncate("short") == "short"
 
 
+def _with_fable(u: Usage, share: float | None = 50) -> Usage:
+    fable = Window(True, 94, NOW + 1 * H, "Fable", share)
+    return replace(u, scoped=(fable,))
+
+
+def test_scoped_limit_in_hover_card_only() -> None:
+    """模型專屬限制（Fable）只加在懸停卡，小工具維持兩列（2026-11-13 決定）。"""
+    (column,) = vm({"claude": ok("claude", _with_fable(CLAUDE_NORMAL))}, [CLAUDE]).columns
+    assert [row.label for row in column.rows] == ["5h", "7d"]
+    assert column.hover.lines[2] == HoverLineVM(
+        "Fable", "94%", Level.CRIT, "今天 19:07 重置（1時00分後） · 最多用每週上限的 50%"
+    )
+    no_share = vm({"claude": ok("claude", _with_fable(CLAUDE_NORMAL, None))}, [CLAUDE])
+    assert no_share.columns[0].hover.lines[2].detail == "今天 19:07 重置（1時00分後）"
+
+
+def test_scoped_limit_reset_passed_in_hover_card() -> None:
+    u = replace(CLAUDE_NORMAL, scoped=(Window(True, 94, NOW - M, "Fable", 50),))
+    line = vm({"claude": ok("claude", u)}, [CLAUDE]).columns[0].hover.lines[2]
+    assert line == HoverLineVM("Fable", "0%", Level.OK, "已重置 · 更新中")
+
+
+def test_tooltip_adds_scoped_limit_when_it_fits() -> None:
+    states = {
+        "claude": ok("claude", _with_fable(CLAUDE_NORMAL)),
+        "codex": ok("codex", CODEX_NORMAL),
+    }
+    tray = build_tray_vm(BOTH, states, NOW, TPE)
+    assert (
+        tray.tooltip.splitlines()[0]
+        == "Claude 5h 42% · 2時13分 | 7d 18% · 4天3時 | Fable 94% · 1時00分"
+    )
+    assert tray.bars == (TrayBar(42, Level.OK), TrayBar(18, Level.OK))  # 圖示仍只畫 5h／7d
+
+
+def test_tooltip_drops_scoped_limits_when_too_long() -> None:
+    many = tuple(Window(True, 10, NOW + H, f"Model{i}") for i in range(8))
+    states = {
+        "claude": ok("claude", replace(CLAUDE_NORMAL, scoped=many)),
+        "codex": ok("codex", CODEX_NORMAL),
+    }
+    tray = build_tray_vm(BOTH, states, NOW, TPE)
+    assert tray.tooltip == (
+        "Claude 5h 42% · 2時13分 | 7d 18% · 4天3時\nCodex 5h 12% · 3時40分 | 30d 6% · 29天"
+    )
+
+
 # ---------------------------------------------------------------- 設定視窗的服務狀態
 
 

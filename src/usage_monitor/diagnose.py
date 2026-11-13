@@ -332,6 +332,8 @@ def check_api(report: Report, provider: Provider, clock: Clock) -> bool:
     report.ok(report.t("diag_api_ok", source=_source(provider, report.lang)))
     report.info(_window_line(usage.session, now, report.lang))
     report.info(_window_line(usage.long, now, report.lang))
+    for w in usage.scoped:
+        report.info(_window_line(w, now, report.lang))
     return True
 
 

@@ -54,6 +54,7 @@ _ZH_TW: dict[str, str] = {
     "hover_reset_unknown": "重置時間未知",
     "hover_reset_soon": "即將重置",
     "hover_reset_at": "{moment} 重置（{countdown}後）",
+    "hover_scoped_share": " · 最多用每週上限的 {percent}",
     # 錯誤說明（依 ErrReason）
     "error_no_credentials": "找不到 {name} 登入資訊",
     "error_expired": "{name} 登入已過期",
@@ -290,6 +291,7 @@ _EN: dict[str, str] = {
     "hover_reset_unknown": "Reset time unknown",
     "hover_reset_soon": "Resets soon",
     "hover_reset_at": "Resets {moment} (in {countdown})",
+    "hover_scoped_share": " · up to {percent} of the weekly limit",
     "error_no_credentials": "No {name} sign-in found",
     "error_expired": "{name} sign-in has expired",
     "error_rejected": "Sign-in rejected (HTTP {status})",

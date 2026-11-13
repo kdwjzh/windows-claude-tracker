@@ -248,8 +248,9 @@ def _hover(
         return HoverVM(title, None, (), None, None, hint)
     lines: list[HoverLineVM] = []
     if state.usage is not None:
-        for i, w in enumerate(_windows(state.usage)):
-            period = long_label(_label(w, i), lang)
+        periods = [(long_label(_label(w, i), lang), w) for i, w in enumerate(_windows(state.usage))]
+        periods += [(w.label or EMPTY, w) for w in state.usage.scoped]
+        for period, w in periods:
             if not w.available:
                 detail = t(lang, "unreported_detail")
                 lines.append(HoverLineVM(period, UNREPORTED_TEXT, None, detail))
@@ -270,6 +271,8 @@ def _hover(
                     moment=timefmt.reset_moment(w.resets_at, now, tz, lang),
                     countdown=timefmt.countdown(w.resets_at, now, lang),
                 )
+            if w.share is not None:
+                detail += t(lang, "hover_scoped_share", percent=percent_text(w.share))
             lines.append(HoverLineVM(period, percent_text(w.percent), level_of(w.percent), detail))
     updated = None
     if state.usage is not None:
@@ -339,11 +342,13 @@ def build_widget_vm(
 # ---------------------------------------------------------------- 系統匣
 
 
-def _tooltip_line(column: ColumnVM, state: ProviderState | None, lang: Lang) -> str:
+def _tooltip_line(
+    column: ColumnVM, state: ProviderState | None, lang: Lang, scoped: tuple[str, ...] = ()
+) -> str:
     if state is None or state.usage is None or needs_action(state):
         return t(lang, "tray_error_line", name=column.title, note=column.note or EMPTY)
     stale = t(lang, "tray_stale") if state.stale else ""
-    parts = " | ".join(f"{row.label} {row.text}" for row in column.rows)
+    parts = " | ".join([*(f"{row.label} {row.text}" for row in column.rows), *scoped])
     return f"{column.title}{stale} {parts}"
 
 
@@ -440,12 +445,19 @@ def build_tray_vm(
 ) -> TrayVM:
     """圖示畫一個監控對象的兩個週期（`icon_provider`：代碼或 "auto"，預設第一個）；
 
-    提示文字每個服務一行，最多 127 字元。
+    提示文字每個服務一行，最多 127 字元；模型專屬限制（例如 Fable）放得下才加，放不下整段省略。
     """
     lines: list[str] = []
+    full: list[str] = []
     for p in providers:
         state = states.get(p[0])
-        lines.append(_tooltip_line(build_column(p, state, now, tz, lang), state, lang))
+        column = build_column(p, state, now, tz, lang)
+        lines.append(_tooltip_line(column, state, lang))
+        scoped = state.usage.scoped if state and state.usage else ()
+        extra = tuple(f"{w.label} {window_text(w, now, tz, lang)}" for w in scoped)
+        full.append(_tooltip_line(column, state, lang, extra))
+    if len("\n".join(full)) <= TOOLTIP_MAX:
+        lines = full
 
     bars: tuple[TrayBar | None, TrayBar | None] = (None, None)
     pid = icon_provider_id(providers, states, now, icon_provider, used_at)

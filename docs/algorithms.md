@@ -77,6 +77,7 @@ anthropic-beta: oauth-2025-04-20
 
 - `five_hour` / `seven_day`: `utilization` (**0–100**), `resets_at` (ISO 8601, UTC)
 - If either is null or has no `utilization`, look in `limits[]` for the item whose `scope` is null and whose `kind` is `session` (5h) / `weekly_all` (7d); the percentage is `percent`, falling back to `utilization`
+- Per-model weekly limits (added 2026-11-13): every `limits[]` item with `kind == "weekly_scoped"` becomes a window in `Usage.scoped`, labeled `scope.model.display_name` and using the same `percent` / `utilization` and `resets_at` fields; items without a name or percentage are skipped. `weekly_scoped_shares[]` entries map `limit_index` (the item's position in `limits[]`) to `allowance_percent_of_weekly`, stored as `Window.share` (for example Fable: at most 50% of the weekly limit). Seen in `tests/fixtures/claude/usage_scoped_2026_11.json` (the model name is anonymized there)
 - Neither window present → `TRANSIENT` / `BAD_RESPONSE`; if only one is present, the other is marked "no data" (`available=False`)
 - A response that isn't JSON → `TRANSIENT` / `BAD_RESPONSE`
 - Format changes (added 2026-11-04): `KNOWN_KEYS`, `KNOWN_BUCKET_KEYS`, `KNOWN_LIMIT_KEYS` and `KNOWN_LIMIT_KINDS` in `parse.py` list the fields seen in the 2026-11 response (`tests/fixtures/claude/usage_full_2026_11.json`). Fields outside them whose value isn't null, and unknown `limits[].kind` values, are logged at debug level (names only, never values). Null fields are ignored: the response carries many null code-named fields that come and go

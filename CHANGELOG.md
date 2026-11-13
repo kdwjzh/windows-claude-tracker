@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- Per-model weekly limits such as Fable: the hover card shows one extra line per model (for example 「Fable 94% 今天 20:00 重置（1時00分後） · 最多用每週上限的 50%」), and the tray tooltip adds it when it fits in 127 characters. The widget keeps its two rows. Models are read from the usage API's `weekly_scoped` limits by name, so new ones appear without an app update. `python -m usage_monitor.diagnose` lists them too (ADR 0008)
+
+### Changed
+
+- `Usage` has a new `scoped` tuple (default empty) and `Window` a new `share` field (default `None`); existing code and the Codex provider are unaffected
+
 ## [2.0.0] - 2026-11-06
 
 A big update: a Usage page with history charts, "Update now" inside the app, diagnostics in a window instead of a second exe, and a batch of fixes. Your settings carry over. Versions up to v1.3.0 don't have "Update now", so download this one by hand (quit the old version from the tray first); from v2.0.0 on, About → "Update now" does it for you.

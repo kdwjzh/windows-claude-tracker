@@ -19,7 +19,9 @@ class Window:
     resets_at: datetime | None = None
     """UTC aware。"""
     label: str | None = None
-    """列標籤，如 "5h"、"7d"、"30d"；None 時由 UI 用預設。"""
+    """列標籤，如 "5h"、"7d"、"30d"；模型專屬限制是模型名稱（如 "Fable"）；None 時由 UI 用預設。"""
+    share: float | None = None
+    """模型專屬限制最多可用到每週總上限的幾 %（0–100）；其他週期為 None。"""
 
 
 @dataclass(frozen=True)
@@ -30,6 +32,8 @@ class Usage:
     """長週期（7d／30d）。"""
     fetched_at: datetime
     """UTC aware。"""
+    scoped: tuple[Window, ...] = ()
+    """模型專屬的每週限制（例如 Fable），依 API 順序；沒有時為空。"""
 
 
 @dataclass(frozen=True)

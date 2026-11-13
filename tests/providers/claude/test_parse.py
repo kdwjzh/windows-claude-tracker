@@ -168,3 +168,71 @@ def test_unknown_fields_and_kinds_are_logged(caplog: pytest.LogCaptureFixture) -
     assert "不認得的 kind：daily_all" in caplog.text
     assert "another_codename" not in caplog.text
     assert "utilization" not in caplog.text.split("不認得的欄位：")[1].split("\n")[0]
+
+
+# ------------------------------------------------------ 模型專屬的每週限制（weekly_scoped）
+
+
+def test_scoped_2026_11_response(caplog: pytest.LogCaptureFixture) -> None:
+    """2026-11-13 的實際回應：多了 Fable 的 weekly_scoped（名稱被去識別化成 <redacted>）。"""
+    caplog.set_level("DEBUG", logger="usage_monitor.providers.claude.parse")
+    u = parse_usage(fixture("usage_scoped_2026_11.json"), NOW)
+    assert (u.session.percent, u.long.percent) == (86.0, 74.0)
+    assert len(u.scoped) == 1
+    w = u.scoped[0]
+    assert (w.available, w.percent, w.label, w.share) == (True, 94.0, "<redacted>", 50.0)
+    assert w.resets_at == datetime(2026, 11, 13, 12, 0, 0, 362260, tzinfo=UTC)
+    assert "不認得" not in caplog.text
+
+
+def scoped(name: object, percent: object = 10, **extra: object) -> dict[str, object]:
+    return {
+        "kind": "weekly_scoped",
+        "percent": percent,
+        "resets_at": "2026-11-13T12:00:00Z",
+        "scope": {"model": {"id": None, "display_name": name}, "surface": None},
+        **extra,
+    }
+
+
+def test_every_scoped_model_is_listed_in_order() -> None:
+    """之後出現的新模型不用改程式就會顯示；分享比例依 limit_index 對到 limits[] 的位置。"""
+    body = {
+        "limits": [
+            {"kind": "session", "scope": None, "percent": 5},
+            scoped("Fable", 94),
+            scoped("Opus", utilization=30.5, percent=None),
+        ],
+        "weekly_scoped_shares": [
+            {"limit_index": 2, "allowance_percent_of_weekly": 40},
+            {"limit_index": "1", "allowance_percent_of_weekly": 50},  # 不是整數：忽略
+            None,
+        ],
+    }
+    u = parse_usage(body, NOW)
+    assert [(w.label, w.percent, w.share) for w in u.scoped] == [
+        ("Fable", 94.0, None),
+        ("Opus", 30.5, 40.0),
+    ]
+    assert u.session.percent == 5
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        scoped(None),
+        scoped(""),
+        scoped("Fable", percent=None),
+        {"kind": "weekly_scoped", "scope": "opus", "percent": 77},  # 舊的猜測格式
+        {"kind": "weekly_scoped", "scope": {"model": None}, "percent": 77},
+        "nope",
+    ],
+)
+def test_malformed_scoped_items_are_skipped(item: object) -> None:
+    u = parse_usage({"limits": [{"kind": "session", "scope": None, "percent": 5}, item]}, NOW)
+    assert u.scoped == ()
+
+
+def test_no_scoped_limits_means_empty_tuple() -> None:
+    assert parse_usage(fixture("usage_full_2026_11.json"), NOW).scoped == ()
+    assert parse_usage(fixture("usage_legacy.json"), NOW).scoped == ()

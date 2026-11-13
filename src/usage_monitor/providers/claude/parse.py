@@ -51,18 +51,50 @@ def _bucket_window(bucket: object, label: str) -> Window | None:
     return Window(True, percent, parse_iso(data.get("resets_at")), label)
 
 
+def _limit_percent(item: dict[str, object]) -> float | None:
+    percent = as_float(item.get("percent"))
+    return percent if percent is not None else as_float(item.get("utilization"))
+
+
 def _limits_window(limits: object, kind: str, label: str) -> Window | None:
     """新格式：`limits[]` 中 scope 為 null 的 session／weekly_all 項目。"""
     for raw in as_list(limits) or []:
         item = as_dict(raw)
         if item is None or as_str(item.get("kind")) != kind or item.get("scope") is not None:
             continue
-        percent = as_float(item.get("percent"))
-        if percent is None:
-            percent = as_float(item.get("utilization"))
+        percent = _limit_percent(item)
         if percent is not None:
             return Window(True, percent, parse_iso(item.get("resets_at")), label)
     return None
+
+
+def _scoped_windows(data: dict[str, object]) -> tuple[Window, ...]:
+    """`limits[]` 裡每個 weekly_scoped 項目（模型專屬的每週限制，例如 Fable）。
+
+    名稱用 `scope.model.display_name`，所以之後出現的新模型不用改程式就會顯示；
+    `weekly_scoped_shares[].limit_index` 指向 limits[] 的位置，帶出「最多可用每週上限的幾 %」。
+    """
+    shares: dict[int, float] = {}
+    for raw in as_list(data.get("weekly_scoped_shares")) or []:
+        share = as_dict(raw) or {}
+        index, allowance = (
+            share.get("limit_index"),
+            as_float(share.get("allowance_percent_of_weekly")),
+        )
+        if isinstance(index, int) and allowance is not None:
+            shares[index] = allowance
+    result: list[Window] = []
+    for i, raw in enumerate(as_list(data.get("limits")) or []):
+        item = as_dict(raw)
+        if item is None or as_str(item.get("kind")) != "weekly_scoped":
+            continue
+        model = as_dict((as_dict(item.get("scope")) or {}).get("model")) or {}
+        name, percent = as_str(model.get("display_name")), _limit_percent(item)
+        if name and percent is not None:
+            result.append(
+                Window(True, percent, parse_iso(item.get("resets_at")), name, shares.get(i))
+            )
+    return tuple(result)
 
 
 def log_unknown(data: dict[str, object]) -> None:
@@ -104,6 +136,7 @@ def parse_usage(body: object, fetched_at: datetime) -> Usage:
         session=session or Window(label=SESSION_LABEL),
         long=long or Window(label=LONG_LABEL),
         fetched_at=fetched_at,
+        scoped=_scoped_windows(data),
     )
 
 
