@@ -118,6 +118,11 @@ class Metrics:
     text_slack: int = 4
     """文字後面留的空隙：欄寬 = 這一欄目前最長文字的實際寬度＋這個值（不貼齊邊框）。"""
     col_gap: int = 10
+    badge_px: int = 8
+    """欄名旁方案標籤（「PRO」）的字級；標籤是細框＋小字，顏色跟欄名一樣。"""
+    badge_h: int = 11
+    badge_pad: int = 3
+    badge_gap: int = 4
     """兩欄之間（分隔線兩側各一半）。"""
 
     @property

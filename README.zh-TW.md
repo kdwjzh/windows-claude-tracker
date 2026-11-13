@@ -14,6 +14,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 <img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="550">
 
+- 每個服務名稱旁邊顯示你的方案（Pro、Max 5x、Plus、Free…）
 - 綠色 < 70%、黃色 70–89%、紅色 ≥ 90%；滑鼠停在小工具上會顯示確切的重置時刻，以及 Fable 這類模型專屬的每週限制
 - 儀表板「用量」頁：過去 7 天的 5 小時用量、每個 7 天（或 30 天）週期的最高用量，以及最近的平均
 - 系統匣圖示（小工具隱藏時看這裡）、全螢幕時自動隱藏、`Ctrl+Alt+U` 顯示／隱藏

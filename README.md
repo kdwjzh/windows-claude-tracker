@@ -14,6 +14,7 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
 
 <img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="550">
 
+- Your plan (Pro, Max 5x, Plus, Free…) next to each service name
 - Green below 70%, yellow 70–89%, red 90% and above; hover over the widget to see the exact reset time and per-model weekly limits such as Fable
 - Dashboard "Usage" page: 5-hour usage over the past 7 days, the peak of each weekly (or monthly) period, and your recent average
 - Tray icon (check it when the widget is hidden), auto-hide in full screen, `Ctrl+Alt+U` to show/hide

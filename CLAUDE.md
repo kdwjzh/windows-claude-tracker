@@ -106,6 +106,8 @@ anthropic-beta: oauth-2025-04-20
 - Neither window present → treated as a format error
 - Every `limits[]` item whose `kind` is `weekly_scoped` (per-model weekly limit, for example Fable) becomes a `Usage.scoped` window, labeled with `scope.model.display_name` (items without a name or percentage are skipped), in API order, so a new model shows up without code changes. `weekly_scoped_shares[]` (`limit_index` → position in `limits[]`, `allowance_percent_of_weekly`) fills `Window.share`. `spend` (extra usage) is not shown (§1)
 
+**Plan** (added 2026-11-13): `GET https://api.anthropic.com/api/oauth/profile` with the same headers. Only `organization.organization_type` (`claude_pro` → Pro, `claude_max` → Max, `claude_team` → Team, `claude_enterprise` → Enterprise; other `claude_xxx` → "Xxx") and, for Max, `organization.rate_limit_tier` (ending in `max_5x` / `max_20x` → "Max 5x" / "Max 20x") are read; the response also holds the email and name, which are never read, logged or stored. Called at start, when the token changes (compared by its SHA-256, in memory only) and every 24 hours; a failure only leaves `Usage.plan` empty (retried after 1 hour) and never fails the poll
+
 **Fallback** (only when the usage API returns a 4xx other than 401/403/429; 5xx never falls back):
 
 ```http
@@ -126,6 +128,7 @@ Read the response headers `anthropic-ratelimit-unified-{5h,7d}-utilization` (**0
 - Use `limit_window_seconds >= 86400` to decide which window is the long one; never rely on primary/secondary order
 - **The long window isn't always 7 days**: Codex's long window has been measured at 30 days (`limit_window_seconds = 2592000`). Row labels come from `limit_window_seconds` (18000 → `5h`, 604800 → `7d`, 2592000 → `30d`) and are stored in `Window.label`
 - Some accounts have **only a 30-day window and no 5h window**: an unreported period is still drawn as an empty bar showing 0%
+- Plan (added 2026-11-13): `plan_type` from the same response, first letter capitalized (`free` → Free, `plus` → Plus), into `Usage.plan`
 
 ### 3.5 Error classification and scheduling
 
@@ -159,12 +162,8 @@ class Window:
     available: bool = False  # the service reported this window (0% counts), as opposed to "no data"
     percent: float = 0.0  # 0–100
     resets_at: datetime | None = None  # UTC aware
-    label: str | None = (
-        None  # "5h", "7d", "30d", or a model name for scoped limits; the UI uses a default when None
-    )
-    share: float | None = (
-        None  # scoped limits only: the most of the weekly limit this model may use (0–100)
-    )
+    label: str | None = None  # "5h", "7d", "30d" or a model name; UI default when None
+    share: float | None = None  # scoped limits: max share of the weekly limit (0–100)
 
 
 @dataclass(frozen=True)
@@ -172,9 +171,8 @@ class Usage:
     session: Window  # short window (5h)
     long: Window  # long window (7d / 30d)
     fetched_at: datetime
-    scoped: tuple[
-        Window, ...
-    ] = ()  # per-model weekly limits (Claude's weekly_scoped), in API order
+    scoped: tuple[Window, ...] = ()  # per-model weekly limits (weekly_scoped), API order
+    plan: str | None = None  # plan name: "Pro", "Max 5x", "Free", "Plus"; None when unknown
 
 
 @dataclass(frozen=True)
@@ -216,6 +214,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 
 - Dark panel `#232428`, 1 px border `#3a3c42`, 8 px corner radius; a 3 px drag handle `#5b5f67` on the left; a 1 px divider between the two columns
 - **Each column shows the service name on top** (10 px) in the service's own color: Claude orange `#e08a5f`, Codex white `#ffffff` (light theme: `#c25a2c` / `#1f1f1f`); any other service uses `#a0a4ab`. **When adding a new service, ask the maintainer which color it should use**; without an answer, keep the default (colors live in `Palette.provider_titles`, decided 2026-11-02); **each column shows its own period labels** (Codex may show `30d`)
+- **Plan badge** (added 2026-11-13): right after the service name, a small badge with the plan (`Usage.plan`, letters uppercased: 「PRO」「MAX 5x」「FREE」): 8 px bold text with a 1 px rounded outline, both in the service's title color, 11 px tall, 3 px padding, 4 px after the name; the status text (「未登入」, 「12 分鐘前」) follows the badge. **The badge never widens the widget**: column widths ignore it, and when it doesn't fit it isn't drawn (maintainer's choice). The hover card title becomes 「Claude · Pro」; the tray tooltip has no plan
 - Each row (16 px tall, 11 px text): label (at least 21 px wide) + 10-segment bar (each segment 6×11 px, 2 px gap, 2 px radius; sizes reduced on 2026-11-02 to make the widget smaller) + (a red `!` only on error) + text (about 92–112 px wide, enough for at least 「滿 · 20:15 重置」/ "Full · resets 20:15")
 - Bar fill: **each 1% fills a tenth of a segment**, left to right (42% → 4 full segments + 2/10 of the fifth; 0% → empty); the percentage is rounded to a whole number first so the bar matches the text (decided 2026-11-02)
 - Bar colors: < 70% `#35c27a`, 70–89% `#f0b232`, ≥ 90% `#f05a46` (every lit part of the bar uses the same color); empty segments `#3b3e45`
@@ -516,7 +515,7 @@ Scheduler (background thread)
 2. **Read only**: never modify any Claude or Codex file.
    The usage history (`history.db`) stores only service ids, percentages and times: never tokens, account ids or anything else.
 3. **Never use the refresh token**.
-4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
+4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. Of the Claude profile API (§3.3) only the two plan fields are read; account details in it are never logged or stored. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
 
 ### 5.2 Stability
 

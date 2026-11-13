@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from collections.abc import Callable, Sequence
+from dataclasses import replace
+from datetime import datetime, timedelta
 
 from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.interfaces import Clock, CredentialSource, Provider, Token, Transport
@@ -12,12 +15,14 @@ from usage_monitor.providers.claude import api
 from usage_monitor.providers.claude.credentials.cli import SOURCE_NAME as CLI_SOURCE
 from usage_monitor.providers.claude.credentials.cli import CliCredentialSource
 from usage_monitor.providers.claude.credentials.desktop import DesktopCredentialSource
-from usage_monitor.providers.claude.parse import parse_headers, parse_usage
+from usage_monitor.providers.claude.parse import parse_headers, parse_plan, parse_usage
 
 log = logging.getLogger(__name__)
 
 PROVIDER_ID = "claude"
 DISPLAY_NAME = "Claude"
+PLAN_TTL = timedelta(hours=24)
+PLAN_RETRY = timedelta(hours=1)
 
 
 class ClaudeProvider:
@@ -33,6 +38,10 @@ class ClaudeProvider:
         self._source_label: str | None = None
         self._cli_refresher: Callable[[], bool] | None = None
         self._cli_refresh_enabled: Callable[[], bool] = lambda: False
+        self._plan: str | None = None
+        self._plan_key: str | None = None
+        """查方案時用的 token 的 SHA-256（只在記憶體）；token 換了就重查。"""
+        self._plan_due: datetime | None = None
 
     def configure_cli_refresh(
         self, refresher: Callable[[], bool], enabled: Callable[[], bool]
@@ -99,6 +108,26 @@ class ClaudeProvider:
         self._source_label = None
         raise PollError(ErrKind.AUTH, "找不到 Claude 登入資訊", reason=ErrReason.NO_CREDENTIALS)
 
+    def _plan_for(self, token: Token) -> str | None:
+        """訂閱方案：啟動時、換 token 時、之後每 24 小時查一次 profile API；失敗 1 小時後再試。
+
+        失敗只影響方案顯示，不影響用量（不丟例外）。
+        """
+        now = self._clock.now()
+        key = hashlib.sha256(token.value.encode()).hexdigest()
+        if key == self._plan_key and self._plan_due is not None and now < self._plan_due:
+            return self._plan
+        if key != self._plan_key:
+            self._plan = None
+        self._plan_key = key
+        try:
+            self._plan = parse_plan(api.get_profile(self._transport, token.value).json())
+            self._plan_due = now + PLAN_TTL
+        except Exception as e:  # 包含 PollError、JSON 錯誤；只記類型，不記內容
+            log.debug("查不到 Claude 訂閱方案：%s", type(e).__name__)
+            self._plan_due = now + PLAN_RETRY
+        return self._plan
+
     def poll(self) -> Usage:
         token = self._token()
         self._source_label = token.source
@@ -110,14 +139,15 @@ class ClaudeProvider:
                 raise
             log.info("用量 API 不支援（HTTP %s），改用 Messages 備援", e.status)
             resp = api.probe_messages(self._transport, token.value)
-            return parse_headers(resp.header, self._clock.now())
+            usage = parse_headers(resp.header, self._clock.now())
+            return replace(usage, plan=self._plan_for(token))
         try:
             body = resp.json()
         except ValueError as e:
             raise PollError(
                 ErrKind.TRANSIENT, "用量 API 回應不是 JSON", reason=ErrReason.BAD_RESPONSE
             ) from e
-        return parse_usage(body, self._clock.now())
+        return replace(parse_usage(body, self._clock.now()), plan=self._plan_for(token))
 
     def credential_signature(self) -> str:
         return ";".join(s.signature() for s in self._sources)

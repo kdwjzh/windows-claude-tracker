@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timedelta
 
 from usage_monitor.core.errors import ErrKind, ErrReason, PollError
-from usage_monitor.core.json_access import as_dict, as_float, parse_unix, unknown_keys
+from usage_monitor.core.json_access import as_dict, as_float, as_str, parse_unix, unknown_keys
 from usage_monitor.core.models import Usage, Window
 from usage_monitor.core.windows import is_long_window, label_for_seconds
 
@@ -61,6 +61,11 @@ def _window(raw: object, fetched_at: datetime) -> tuple[Window, float | None] | 
     return Window(True, percent, resets_at, label_for_seconds(seconds)), seconds
 
 
+def plan_name(plan_type: str | None) -> str | None:
+    """ "plus" → "Plus"；沒有或空字串時 None。"""
+    return plan_type.strip().capitalize() or None if plan_type else None
+
+
 def parse_usage(body: object, fetched_at: datetime) -> Usage:
     log_unknown(as_dict(body))
     rate_limit = as_dict((as_dict(body) or {}).get("rate_limit"))
@@ -103,4 +108,5 @@ def parse_usage(body: object, fetched_at: datetime) -> Usage:
             long.available, long.percent, long.resets_at, long.label or DEFAULT_LONG_LABEL
         ),
         fetched_at=fetched_at,
+        plan=plan_name(as_str((as_dict(body) or {}).get("plan_type"))),
     )  # fmt: skip

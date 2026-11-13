@@ -44,6 +44,20 @@ def title_width(c: ColumnVM, m: Metrics = METRICS) -> int:
     return _metrics(m.title_px).horizontalAdvance(text)
 
 
+def badge_width(c: ColumnVM, m: Metrics = METRICS) -> int:
+    """方案標籤（含左邊間距）的寬度；沒有標籤時 0。"""
+    if not c.badge:
+        return 0
+    return (
+        m.badge_gap + _metrics(m.badge_px, bold=True).horizontalAdvance(c.badge) + m.badge_pad * 2
+    )
+
+
+def badge_fits(c: ColumnVM, col_w: int, m: Metrics = METRICS) -> bool:
+    """欄寬只看欄名＋狀態文字和各列（title_width 不含標籤），標籤放得下才畫，小工具不會因此變寬。"""
+    return bool(c.badge) and title_width(c, m) + badge_width(c, m) + m.text_slack <= col_w
+
+
 def label_width(c: ColumnVM, m: Metrics = METRICS) -> int:
     """週期標籤區：至少 label_w；「30d」較寬時依實際寬度＋label_gap，不會貼到進度條。"""
     widest = max((_metrics(m.row_px).horizontalAdvance(r.label) for r in c.rows), default=0)
@@ -146,8 +160,14 @@ def _paint_column(p: QPainter, c: ColumnVM, rect: QRect, palette: Palette, m: Me
     p.setPen(_color(palette.title_color(c.provider_id)))
     title_rect = QRect(rect.x(), m.pad_t, rect.width(), m.title_h)
     p.drawText(title_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, c.title)
+    offset = QFontMetrics(title_font).horizontalAdvance(c.title)
+    if c.badge and badge_fits(c, rect.width(), m):
+        _paint_badge(
+            p, c.badge, rect.x() + offset + m.badge_gap, palette.title_color(c.provider_id), m
+        )
+        offset += badge_width(c, m)
     if c.note:
-        offset = QFontMetrics(title_font).horizontalAdvance(c.title)
+        p.setFont(title_font)  # 畫完標籤字型被換成小字
         color = palette.error_text if c.note_kind is NoteKind.ERROR else palette.text_dim
         p.setPen(_color(color))
         note_rect = title_rect.adjusted(offset, 0, 0, 0)
@@ -160,6 +180,18 @@ def _paint_column(p: QPainter, c: ColumnVM, rect: QRect, palette: Palette, m: Me
     for row in c.rows:
         _paint_row(p, row, rect, label_w, y, palette, m)
         y += m.row_h
+
+
+def _paint_badge(p: QPainter, text: str, x: int, color: str, m: Metrics) -> None:
+    """細框圓角＋粗體小字（參考 2026-11-13 Jimmy 給的樣式），顏色跟欄名一樣。"""
+    p.setFont(font(m.badge_px, bold=True))
+    w = _metrics(m.badge_px, bold=True).horizontalAdvance(text) + m.badge_pad * 2
+    box = QRectF(x + 0.5, m.pad_t + (m.title_h - m.badge_h) / 2 + 0.5, w - 1, m.badge_h - 1)
+    p.setPen(QPen(_color(color, 0.7), 1))
+    p.setBrush(Qt.BrushStyle.NoBrush)
+    p.drawRoundedRect(box, 2.5, 2.5)
+    p.setPen(_color(color))
+    p.drawText(box, Qt.AlignmentFlag.AlignCenter, text)
 
 
 def _paint_row(

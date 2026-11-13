@@ -140,6 +140,28 @@ def parse_usage(body: object, fetched_at: datetime) -> Usage:
     )
 
 
+_PLANS = {"claude_pro": "Pro", "claude_max": "Max", "claude_team": "Team",
+          "claude_enterprise": "Enterprise"}  # fmt: skip
+_MAX_TIERS = {"max_5x": "Max 5x", "max_20x": "Max 20x"}
+
+
+def parse_plan(body: object) -> str | None:
+    """`/api/oauth/profile` → 方案名稱。只讀 organization 的兩個方案欄位，其他（email 等）不碰。
+
+    organization_type：claude_pro／claude_max／…；Max 再用 rate_limit_tier 分 5x／20x。
+    不認得的 claude_xxx 顯示成 "Xxx"。
+    """
+    org = as_dict((as_dict(body) or {}).get("organization")) or {}
+    kind = as_str(org.get("organization_type"))
+    if not kind:
+        return None
+    name = _PLANS.get(kind) or kind.removeprefix("claude_").replace("_", " ").capitalize()
+    if kind == "claude_max":
+        tier = as_str(org.get("rate_limit_tier")) or ""
+        name = next((v for k, v in _MAX_TIERS.items() if tier.endswith(k)), name)
+    return name or None
+
+
 def parse_headers(header: Callable[[str], str | None], fetched_at: datetime) -> Usage:
     """Messages API 的 rate-limit header → Usage。utilization 是 0–1，要 ×100。
 

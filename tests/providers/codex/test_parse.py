@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from usage_monitor.core.errors import ErrKind, PollError
-from usage_monitor.providers.codex.parse import parse_usage
+from usage_monitor.providers.codex.parse import parse_usage, plan_name
 
 NOW = datetime(2026, 10, 29, 12, tzinfo=UTC)
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "codex"
@@ -139,3 +139,14 @@ def test_unknown_fields_are_logged(caplog: pytest.LogCaptureFixture) -> None:
         "不認得的欄位：weekly_bonus, rate_limit.tertiary_window, primary_window.burst_percent"
         in caplog.text
     )
+
+
+def test_plan_type_becomes_plan_name() -> None:
+    assert parse_usage(fixture("usage_free_30d_only.json"), NOW).plan == "Free"
+    assert parse_usage(fixture("usage_week.json"), NOW).plan == "Plus"
+    assert parse_usage(fixture("usage_month_reversed.json"), NOW).plan is None  # 沒有 plan_type
+
+
+@pytest.mark.parametrize(("raw", "plan"), [("pro", "Pro"), ("  ", None), ("", None), (None, None)])
+def test_plan_name(raw: str | None, plan: str | None) -> None:
+    assert plan_name(raw) == plan

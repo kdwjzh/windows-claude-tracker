@@ -358,3 +358,25 @@ def test_service_title_colors() -> None:
     # 淺色主題的 Codex 不能是白字（底色是淺灰）
     assert theme.LIGHT.title_color("codex") == theme.LIGHT.text
     assert theme.LIGHT.title_color("cursor") == theme.LIGHT.text_secondary
+
+
+@pytest.mark.usefixtures("qapp")
+@pytest.mark.parametrize("plan", [None, "Pro", "Max 20x"])
+def test_plan_badge_never_widens_widget(plan: str | None) -> None:
+    """2026-11-13 Jimmy：加方案標籤但小工具維持原本尺寸；放不下時省略標籤。"""
+    m = theme.METRICS
+    base = states()
+    with_plan = {
+        k: replace(s, usage=replace(s.usage, plan=plan)) if s.usage else s for k, s in base.items()
+    }
+    before = painter.layout(build_widget_vm(PROVIDERS, base, NOW))
+    vm = build_widget_vm(PROVIDERS, with_plan, NOW)
+    after = painter.layout(vm)
+    assert (after.width, after.height) == (before.width, before.height)
+    claude, rect = vm.columns[0], after.columns[0]
+    assert painter.badge_fits(claude, rect.width()) is (plan is not None)  # 正常寬度放得下
+    assert not painter.badge_fits(claude, painter.title_width(claude) + m.text_slack)  # 太窄就不畫
+    image = QImage(after.width, after.height, QImage.Format.Format_ARGB32)
+    p = QPainter(image)
+    painter.paint(p, vm, theme.DARK)
+    p.end()

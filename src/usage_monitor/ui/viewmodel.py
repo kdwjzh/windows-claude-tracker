@@ -79,6 +79,8 @@ class ColumnVM:
     note_kind: NoteKind | None
     rows: tuple[RowVM, ...]
     hover: HoverVM
+    badge: str | None = None
+    """欄名旁的方案標籤（「PRO」「MAX 5x」）；放不下時畫面會省略，不撐寬小工具。"""
 
 
 @dataclass(frozen=True)
@@ -165,6 +167,13 @@ def long_label(label: str, lang: Lang = Lang.ZH_TW) -> str:
     return label
 
 
+def plan_badge(plan: str | None) -> str | None:
+    """方案名稱 → 標籤文字：英文字大寫、其他照舊（"Max 5x" → "MAX 5x"）。"""
+    if not plan:
+        return None
+    return " ".join(w.upper() if w.isalpha() else w for w in plan.split())
+
+
 def source_text(source: str, lang: Lang = Lang.ZH_TW) -> str:
     """來源代碼 → 當前語言（「desktop」→「桌面版」）；不認得的代碼原樣顯示。"""
     key = f"source_{source}"
@@ -246,6 +255,8 @@ def _hover(
     hint = t(lang, "hover_hint")
     if state is None:
         return HoverVM(title, None, (), None, None, hint)
+    if state.usage is not None and state.usage.plan:
+        title = f"{title} · {state.usage.plan}"
     lines: list[HoverLineVM] = []
     if state.usage is not None:
         periods = [(long_label(_label(w, i), lang), w) for i, w in enumerate(_windows(state.usage))]
@@ -313,16 +324,21 @@ def build_column(
         )  # fmt: skip
 
     windows = _windows(state.usage)
+    badge = plan_badge(state.usage.plan) if state.usage else None
     if needs_action(state):
         assert state.error is not None
         note = error_note(state.error, lang)
-        return ColumnVM(pid, title, note, NoteKind.ERROR, rows(windows, RowStyle.ERROR), hover)
+        return ColumnVM(
+            pid, title, note, NoteKind.ERROR, rows(windows, RowStyle.ERROR), hover, badge
+        )
 
     if state.stale and state.usage is not None:
         note = timefmt.ago(state.usage.fetched_at, now, lang)
-        return ColumnVM(pid, title, note, NoteKind.MUTED, rows(windows, RowStyle.STALE), hover)
+        return ColumnVM(
+            pid, title, note, NoteKind.MUTED, rows(windows, RowStyle.STALE), hover, badge
+        )
 
-    return ColumnVM(pid, title, None, None, rows(windows, RowStyle.NORMAL), hover)
+    return ColumnVM(pid, title, None, None, rows(windows, RowStyle.NORMAL), hover, badge)
 
 
 def build_widget_vm(

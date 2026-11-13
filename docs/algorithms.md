@@ -108,6 +108,20 @@ Read the response headers (prefix `anthropic-ratelimit-unified-`):
 - 401/403, or none of these headers → classified by status code (§6); a 2xx without the headers raises `UNSUPPORTED`
 - When `status == rejected` and both utilizations are 0, set the window named by the claim to 100%
 
+### 4.2 Plan (profile API)
+
+Code: `providers/claude/api.get_profile`, `parse.parse_plan`, `provider._plan_for` (added 2026-11-13)
+
+```http
+GET https://api.anthropic.com/api/oauth/profile
+Authorization: Bearer <token>
+anthropic-beta: oauth-2025-04-20
+```
+
+- Read only `organization.organization_type` and `organization.rate_limit_tier`; ignore `account` (email, name) and everything else
+- `claude_pro` → "Pro", `claude_max` → "Max" ("Max 5x" / "Max 20x" when `rate_limit_tier` ends in `max_5x` / `max_20x`), `claude_team` → "Team", `claude_enterprise` → "Enterprise", other `claude_xxx` → "Xxx"; missing → `None`
+- Cached per token (SHA-256 of the token, memory only): re-read after 24 hours or when the token changes; any failure (HTTP error, not JSON) → `None`, retried after 1 hour, logged at debug level by exception type only; the usage poll is never affected
+
 ## 5. Codex usage API
 
 Code: `providers/codex/`
@@ -132,6 +146,8 @@ Each of `rate_limit.primary_window` / `secondary_window` has:
 | `used_percent` | 0–100 |
 | `reset_at` | Unix seconds; when missing, use `reset_after_seconds` added to the fetch time |
 | `limit_window_seconds` | Window length |
+
+The top-level `plan_type` (`free`, `plus`, …) becomes `Usage.plan` with its first letter capitalized (added 2026-11-13).
 
 - **`limit_window_seconds >= 86400` decides the long window**, regardless of primary/secondary order; only without a length does it fall back to "primary is short, secondary is long"
 - Row labels come from the window length (`core/windows.py`): a day or more → `round(seconds / 86400)` days (604800 → `7d`, 2592000 → `30d`), otherwise `round(seconds / 3600)` hours (18000 → `5h`); `5h` / `7d` when it can't be determined

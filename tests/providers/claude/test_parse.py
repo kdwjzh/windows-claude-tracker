@@ -8,7 +8,7 @@ import pytest
 
 from usage_monitor.core.errors import ErrKind, PollError
 from usage_monitor.core.interfaces import Response
-from usage_monitor.providers.claude.parse import parse_headers, parse_usage
+from usage_monitor.providers.claude.parse import parse_headers, parse_plan, parse_usage
 
 NOW = datetime(2026, 10, 29, 12, tzinfo=UTC)
 FIXTURES = Path(__file__).parents[2] / "fixtures" / "claude"
@@ -236,3 +236,30 @@ def test_malformed_scoped_items_are_skipped(item: object) -> None:
 def test_no_scoped_limits_means_empty_tuple() -> None:
     assert parse_usage(fixture("usage_full_2026_11.json"), NOW).scoped == ()
     assert parse_usage(fixture("usage_legacy.json"), NOW).scoped == ()
+
+
+@pytest.mark.parametrize(
+    ("org", "plan"),
+    [
+        ({"organization_type": "claude_pro", "rate_limit_tier": "default_claude_ai"}, "Pro"),
+        ({"organization_type": "claude_max", "rate_limit_tier": "default_claude_max_5x"}, "Max 5x"),
+        (
+            {"organization_type": "claude_max", "rate_limit_tier": "default_claude_max_20x"},
+            "Max 20x",
+        ),
+        ({"organization_type": "claude_max", "rate_limit_tier": None}, "Max"),
+        ({"organization_type": "claude_team"}, "Team"),
+        ({"organization_type": "claude_enterprise"}, "Enterprise"),
+        ({"organization_type": "claude_new_plan"}, "New plan"),  # 不認得：照名稱顯示
+        ({"organization_type": None}, None),
+        ({}, None),
+    ],
+)
+def test_parse_plan(org: dict[str, object], plan: str | None) -> None:
+    body = {"account": {"email": "a@b.c", "has_claude_pro": True}, "organization": org}
+    assert parse_plan(body) == plan
+
+
+@pytest.mark.parametrize("body", [None, [], {"organization": "x"}])
+def test_parse_plan_tolerates_garbage(body: object) -> None:
+    assert parse_plan(body) is None

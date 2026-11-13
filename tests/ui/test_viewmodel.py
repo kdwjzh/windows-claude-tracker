@@ -26,6 +26,7 @@ from usage_monitor.ui.viewmodel import (
     build_tray_vm,
     build_widget_vm,
     long_label,
+    plan_badge,
     segments_for,
     service_status,
     truncate,
@@ -611,3 +612,46 @@ def test_update_status_shows_percent_and_starting() -> None:
     )
     assert update_status_text(s, Lang.ZH_TW, InstallStatus.STARTING) == "正在啟動 v1.4.0…"
     assert update_status_text(s, Lang.EN, InstallStatus.STARTING) == "Starting v1.4.0…"
+
+
+# ---------------------------------------------------------------- 訂閱方案標籤
+
+
+@pytest.mark.parametrize(
+    ("plan", "badge"),
+    [
+        ("Pro", "PRO"),
+        ("Max 5x", "MAX 5x"),
+        ("Max 20x", "MAX 20x"),
+        ("Plus", "PLUS"),
+        (None, None),
+        ("", None),
+    ],
+)
+def test_plan_badge(plan: str | None, badge: str | None) -> None:
+    assert plan_badge(plan) == badge
+
+
+def test_plan_shows_as_badge_and_in_hover_title() -> None:
+    u = replace(CLAUDE_NORMAL, plan="Max 5x")
+    (column,) = vm({"claude": ok("claude", u)}, [CLAUDE]).columns
+    assert column.title == "Claude"  # 欄名不變，標籤另外畫
+    assert column.badge == "MAX 5x"
+    assert column.hover.title == "Claude · Max 5x"
+    tray = build_tray_vm([CLAUDE], {"claude": ok("claude", u)}, NOW, TPE)
+    assert "Max" not in tray.tooltip  # 滑鼠提示不加方案（2026-11-13 決定）
+
+
+def test_badge_kept_with_stale_and_error_notes() -> None:
+    u = replace(CLAUDE_NORMAL, plan="Pro")
+    stale = ProviderState("claude", u, PollError(ErrKind.TRANSIENT, "x"), True, None)
+    auth = ProviderState("claude", u, PollError(ErrKind.AUTH, "找不到"), False, None)
+    for state in (stale, auth):
+        (column,) = vm({"claude": state}, [CLAUDE]).columns
+        assert column.badge == "PRO" and column.note
+
+
+def test_no_plan_no_badge() -> None:
+    (column,) = vm({"claude": ok("claude", CLAUDE_NORMAL)}, [CLAUDE]).columns
+    assert column.badge is None and column.hover.title == "Claude"
+    assert vm({}, [CLAUDE]).columns[0].badge is None

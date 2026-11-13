@@ -34,6 +34,8 @@ class Usage:
     """UTC aware。"""
     scoped: tuple[Window, ...] = ()
     """模型專屬的每週限制（例如 Fable），依 API 順序；沒有時為空。"""
+    plan: str | None = None
+    """訂閱方案的顯示名稱，如 "Pro"、"Max 5x"、"Plus"；不知道時為 None。"""
 
 
 @dataclass(frozen=True)

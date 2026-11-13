@@ -6,6 +6,7 @@ from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.interfaces import Response, Transport
 
 USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+PROFILE_URL = "https://api.anthropic.com/api/oauth/profile"
 MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 BETA = "oauth-2025-04-20"
 API_VERSION = "2023-06-01"
@@ -66,6 +67,17 @@ def get_usage(transport: Transport, token: str) -> Response:
         timeout=TIMEOUT,
     )
     raise_for_status(resp, "用量 API")
+    return resp
+
+
+def get_profile(transport: Transport, token: str) -> Response:
+    """帳號資料（只用來判斷訂閱方案；回應含 email 等個資，呼叫端只能讀方案欄位）。"""
+    resp = transport.get(
+        PROFILE_URL,
+        {"Authorization": f"Bearer {token}", "anthropic-beta": BETA},
+        timeout=TIMEOUT,
+    )
+    raise_for_status(resp, "帳號 API")
     return resp
 
 

@@ -114,7 +114,7 @@ def test_unsupported_falls_back_to_messages_headers() -> None:
     usage = p.poll()
     assert usage.session.percent == pytest.approx(42)
     assert usage.long.percent == pytest.approx(18)
-    assert [c.method for c in transport.calls] == ["GET", "POST"]
+    assert [c.method for c in transport.calls] == ["GET", "POST", "GET"]  # 最後是查方案
 
 
 def test_invalid_json_is_transient() -> None:
@@ -232,3 +232,77 @@ def test_create_uses_cli_then_desktop(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert [type(s) for s in sources] == [CliCredentialSource, DesktopCredentialSource]
     tok = sources[0].read()
     assert tok is not None and tok.value == "from-cli"
+
+
+# ---------------------------------------------------------------- 訂閱方案（profile API）
+
+PROFILE_PRO = json.dumps(
+    {"account": {"email": "a@b.c"}, "organization": {"organization_type": "claude_pro"}}
+).encode()
+PROFILE_MAX = json.dumps(
+    {
+        "organization": {
+            "organization_type": "claude_max",
+            "rate_limit_tier": "default_claude_max_20x",
+        }
+    }
+).encode()
+
+
+def _usage_calls(transport: FakeTransport) -> list[str]:
+    return [c.url for c in transport.calls]
+
+
+def test_plan_is_read_once_then_cached_for_24_hours() -> None:
+    transport = (
+        FakeTransport()
+        .add("GET", api.USAGE_URL, *[Response(200, body=LEGACY)] * 4)
+        .add(
+            "GET", api.PROFILE_URL, Response(200, body=PROFILE_PRO), Response(200, body=PROFILE_MAX)
+        )
+    )
+    clock = FakeClock(NOW)
+    p = ClaudeProvider([FakeCredentialSource("CLI", Token("t", None, "CLI"))], transport, clock)
+    assert p.poll().plan == "Pro"
+    clock.advance(hours=23)
+    assert p.poll().plan == "Pro"  # 還在 24 小時內：不重查
+    assert _usage_calls(transport).count(api.PROFILE_URL) == 1
+    assert transport.calls[1].headers["Authorization"] == "Bearer t"
+    clock.advance(hours=1)
+    assert p.poll().plan == "Max 20x"
+    assert _usage_calls(transport).count(api.PROFILE_URL) == 2
+
+
+def test_new_token_reads_plan_again() -> None:
+    transport = (
+        FakeTransport()
+        .add("GET", api.USAGE_URL, Response(200, body=LEGACY), Response(200, body=LEGACY))
+        .add(
+            "GET", api.PROFILE_URL, Response(200, body=PROFILE_PRO), Response(200, body=PROFILE_MAX)
+        )
+    )
+    source = FakeCredentialSource("CLI", token("old", "CLI"))
+    p = provider(transport, source)
+    assert p.poll().plan == "Pro"
+    source.token = token("new", "CLI")
+    assert p.poll().plan == "Max 20x"
+
+
+def test_plan_failure_keeps_usage_and_retries_after_an_hour() -> None:
+    transport = (
+        FakeTransport()
+        .add("GET", api.USAGE_URL, *[Response(200, body=LEGACY)] * 4)
+        .add("GET", api.PROFILE_URL, Response(403), Response(200, body=b"<html>"))
+        .add("GET", api.PROFILE_URL, Response(200, body=PROFILE_PRO))
+    )
+    clock = FakeClock(NOW)
+    p = ClaudeProvider([FakeCredentialSource("CLI", Token("t", None, "CLI"))], transport, clock)
+    usage = p.poll()
+    assert usage.plan is None and usage.session.percent == 42.0  # 用量照常
+    clock.advance(minutes=59)
+    assert p.poll().plan is None
+    assert _usage_calls(transport).count(api.PROFILE_URL) == 1
+    clock.advance(minutes=1)
+    assert p.poll().plan is None  # 不是 JSON：一樣只是沒方案
+    clock.advance(hours=1)
+    assert p.poll().plan == "Pro"
