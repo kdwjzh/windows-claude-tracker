@@ -306,3 +306,47 @@ def test_plan_failure_keeps_usage_and_retries_after_an_hour() -> None:
     assert p.poll().plan is None  # 不是 JSON：一樣只是沒方案
     clock.advance(hours=1)
     assert p.poll().plan == "Pro"
+
+
+# ---------------------------------------------------------------- Free 方案（2026-11-14 回報）
+
+PROFILE_FREE = json.dumps({"organization": {"organization_type": "claude_free"}}).encode()
+PROFILE_NO_TYPE = json.dumps({"organization": {"organization_type": None}}).encode()
+
+
+@pytest.mark.parametrize("profile", [PROFILE_FREE, PROFILE_NO_TYPE])
+def test_403_on_free_plan_is_free_plan_not_rejected(profile: bytes) -> None:
+    """另一台電腦用 Claude 桌面版 Free 帳號：用量 API 回 403，被當成「登入被拒絕」。
+
+    Claude 只給付費方案看用量：帳號 API 說不是付費方案時，回報 FREE_PLAN，24 小時後再試。
+    """
+    transport = (
+        FakeTransport()
+        .add("GET", api.USAGE_URL, Response(403))
+        .add("GET", api.PROFILE_URL, Response(200, body=profile))
+    )
+    with pytest.raises(PollError) as info:
+        provider(transport, FakeCredentialSource("桌面版", token("d", "桌面版"))).poll()
+    e = info.value
+    assert (e.kind, e.reason, e.status) == (ErrKind.AUTH, ErrReason.FREE_PLAN, 403)
+    assert e.retry_after == 24 * 3600
+
+
+@pytest.mark.parametrize("profile", [Response(200, body=PROFILE_PRO), Response(500)])
+def test_403_stays_rejected_when_paid_or_plan_unknown(profile: Response) -> None:
+    transport = (
+        FakeTransport()
+        .add("GET", api.USAGE_URL, Response(403))
+        .add("GET", api.PROFILE_URL, profile)
+    )
+    with pytest.raises(PollError) as info:
+        provider(transport, FakeCredentialSource("桌面版", token("d", "桌面版"))).poll()
+    assert info.value.reason is ErrReason.REJECTED
+
+
+def test_401_does_not_look_up_plan() -> None:
+    transport = FakeTransport().add("GET", api.USAGE_URL, Response(401))
+    with pytest.raises(PollError) as info:
+        provider(transport, FakeCredentialSource("桌面版", token("d", "桌面版"))).poll()
+    assert info.value.reason is ErrReason.REJECTED
+    assert len(transport.calls) == 1

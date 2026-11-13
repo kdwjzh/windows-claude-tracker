@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
-from usage_monitor.core.errors import ErrKind, PollError
+from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.levels import Level
 from usage_monitor.core.models import ProviderState, Usage, Window
 from usage_monitor.ui.viewmodel import (
@@ -655,3 +655,39 @@ def test_no_plan_no_badge() -> None:
     (column,) = vm({"claude": ok("claude", CLAUDE_NORMAL)}, [CLAUDE]).columns
     assert column.badge is None and column.hover.title == "Claude"
     assert vm({}, [CLAUDE]).columns[0].badge is None
+
+
+# ---------------------------------------------------------------- Claude Free 方案（2026-11-14）
+
+FREE = PollError(
+    ErrKind.AUTH, "Claude Free 方案沒有用量資料（HTTP 403）", reason=ErrReason.FREE_PLAN,
+    status=403, retry_after=86400,
+)  # fmt: skip
+FREE_STATE = ProviderState("claude", None, FREE, False, "desktop")
+
+
+def test_free_plan_is_not_an_error_to_fix() -> None:
+    """Free 帳號讀不到用量：不是登入問題，不顯示紅色、不跳通知、系統匣不加紅點。"""
+    claude, codex = vm({"claude": FREE_STATE, "codex": ok("codex", CODEX_NORMAL)}).columns
+    assert (claude.badge, claude.note, claude.note_kind) == ("FREE", "不支援", NoteKind.MUTED)
+    assert claude.rows == (
+        RowVM("5h", 0, None, "—", RowStyle.EMPTY),
+        RowVM("7d", 0, None, "—", RowStyle.EMPTY),
+    )
+    assert claude.hover.error == "Claude 只提供付費方案（Pro／Max）的用量，Free 方案無法顯示"
+    assert codex.note is None  # 另一欄不受影響
+    tray = build_tray_vm(BOTH, {"claude": FREE_STATE, "codex": ok("codex", CODEX_NORMAL)}, NOW, TPE)
+    assert tray.dot is None
+    assert tray.tooltip.splitlines()[0] == "Claude：不支援"
+    assert AuthNotifier().update(BOTH, {"claude": FREE_STATE}) == []
+    status = service_status(True, FREE_STATE, NOW, name="Claude")
+    assert status == ServiceStatusVM(
+        "Claude 只提供付費方案（Pro／Max）的用量，Free 方案無法顯示", StatusKind.MUTED
+    )
+
+
+def test_free_plan_after_paid_notifies_again_later() -> None:
+    notifier = AuthNotifier()
+    assert notifier.update([CLAUDE], {"claude": FREE_STATE}) == []
+    rejected = ProviderState("claude", None, PollError(ErrKind.AUTH, "x", status=401), False, None)
+    assert len(notifier.update([CLAUDE], {"claude": rejected})) == 1

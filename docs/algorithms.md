@@ -120,6 +120,7 @@ anthropic-beta: oauth-2025-04-20
 
 - Read only `organization.organization_type` and `organization.rate_limit_tier`; ignore `account` (email, name) and everything else
 - `claude_pro` → "Pro", `claude_max` → "Max" ("Max 5x" / "Max 20x" when `rate_limit_tier` ends in `max_5x` / `max_20x`), `claude_team` → "Team", `claude_enterprise` → "Enterprise", other `claude_xxx` → "Xxx"; missing → `None`
+- On a usage API 403 (added 2026-11-14): look up the plan; if the profile API answered and the plan isn't Pro / Max / Max 5x / Max 20x / Team / Enterprise (including no `organization_type`), raise `AUTH` / `FREE_PLAN` with `retry_after` 86400 (the scheduler then also retries after 24 hours, not only when the credentials change). If the plan lookup failed, keep `REJECTED`
 - Cached per token (SHA-256 of the token, memory only): re-read after 24 hours or when the token changes; any failure (HTTP error, not JSON) → `None`, retried after 1 hour, logged at debug level by exception type only; the usage poll is never affected
 
 ## 5. Codex usage API

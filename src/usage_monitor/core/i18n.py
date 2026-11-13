@@ -64,6 +64,7 @@ _ZH_TW: dict[str, str] = {
     "error_network": "無法連線",
     "error_timeout": "連線逾時",
     "error_unsupported": "用量 API 不支援這個帳號（HTTP {status}）",
+    "error_free_plan": "Claude 只提供付費方案（Pro／Max）的用量，Free 方案無法顯示",
     "error_bad_response": "回應格式不認得",
     "error_unexpected": "發生未預期的錯誤",
     # 資料來源（source_label 代碼）
@@ -265,6 +266,7 @@ _ZH_TW: dict[str, str] = {
     "diag_problem_no_token": "桌面版沒有任何登入 token：請開啟 Claude 桌面版並登入",
     "diag_problem_expired": "桌面版的 token 都已過期：開啟 Claude 桌面版讓它自動更新登入",
     "diag_hint_auth": "登入資訊無效或被拒絕：開啟 Claude 桌面版確認已登入",
+    "diag_hint_free_plan": "這個帳號是 Free 方案：Claude 只提供付費方案的用量，小工具無法顯示",
     "diag_hint_transient": (
         "網路或伺服器暫時有問題：稍後再試；公司網路請確認能連到 api.anthropic.com"
     ),
@@ -300,6 +302,7 @@ _EN: dict[str, str] = {
     "error_network": "Can't connect",
     "error_timeout": "Connection timed out",
     "error_unsupported": "Usage API not supported for this account (HTTP {status})",
+    "error_free_plan": "Claude shows usage only for paid plans (Pro/Max), not for Free",
     "error_bad_response": "Unrecognized response",
     "error_unexpected": "Unexpected error",
     "source_desktop": "Desktop app",
@@ -523,6 +526,10 @@ _EN: dict[str, str] = {
     ),
     "diag_problem_expired": (
         "All of the desktop app's tokens have expired: open Claude Desktop so it renews the sign-in"
+    ),
+    "diag_hint_free_plan": (
+        "This account is on the Free plan: Claude shows usage only for paid plans, "
+        "so the widget can't show it"
     ),
     "diag_hint_auth": (
         "The sign-in is invalid or was rejected: open Claude Desktop and check you're signed in"

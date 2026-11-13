@@ -25,7 +25,7 @@ from typing import Any
 
 from usage_monitor import __version__
 from usage_monitor.core import i18n, timefmt
-from usage_monitor.core.errors import ErrKind, PollError
+from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.i18n import LANGUAGE_CHOICES, Lang, resolve_language, t
 from usage_monitor.core.interfaces import Clock, Progress, Provider, Response, Transport
 from usage_monitor.core.json_access import as_dict, as_str, parse_unix_ms
@@ -326,7 +326,8 @@ def check_api(report: Report, provider: Provider, clock: Clock) -> bool:
         message = _error_text(e, provider.display_name, report.lang)
         report.fail(report.t("diag_api_failed", kind=e.kind.name, status=status, message=message))
         report.info(report.t("diag_source", source=_source(provider, report.lang)))
-        report.problem(report.t(_HINTS[e.kind]))
+        free = e.reason is ErrReason.FREE_PLAN
+        report.problem(report.t("diag_hint_free_plan" if free else _HINTS[e.kind]))
         return False
     now = clock.now()
     report.ok(report.t("diag_api_ok", source=_source(provider, report.lang)))

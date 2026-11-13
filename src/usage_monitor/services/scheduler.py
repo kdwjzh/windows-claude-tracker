@@ -37,6 +37,8 @@ class _Slot:
     retries: int = 0
     paused_signature: str | None = None
     """認證錯誤時記下憑證簽章；簽章改變前不打 API。"""
+    paused_until: datetime | None = None
+    """認證錯誤帶 retry_after 時（例如 Claude Free 方案）：到這個時間也會再試一次。"""
     last_usage: Usage | None = field(default=None)
 
 
@@ -146,11 +148,13 @@ class Scheduler:
     def _service(self, slot: _Slot, *, force: bool) -> None:
         provider = slot.provider
         if slot.paused_signature is not None and not force:
-            if self._signature(provider) == slot.paused_signature:
+            timed_out = slot.paused_until is not None and self._clock.now() >= slot.paused_until
+            if not timed_out and self._signature(provider) == slot.paused_signature:
                 slot.next_due = self._clock.now() + timedelta(seconds=AUTH_RECHECK_SECONDS)
                 return
             log.info("%s 的憑證已改變，恢復輪詢", provider.id)
         slot.paused_signature = None
+        slot.paused_until = None
 
         try:
             usage = provider.poll()
@@ -183,6 +187,8 @@ class Scheduler:
         if error.kind is ErrKind.AUTH:
             slot.retries = 0
             slot.paused_signature = self._signature(provider)
+            if error.retry_after is not None:
+                slot.paused_until = now + timedelta(seconds=error.retry_after)
             slot.next_due = now + timedelta(seconds=AUTH_RECHECK_SECONDS)
             log.warning("%s 認證錯誤，暫停輪詢直到憑證改變：%s", provider.id, error.message)
         else:

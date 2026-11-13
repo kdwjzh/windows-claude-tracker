@@ -23,6 +23,8 @@ PROVIDER_ID = "claude"
 DISPLAY_NAME = "Claude"
 PLAN_TTL = timedelta(hours=24)
 PLAN_RETRY = timedelta(hours=1)
+PAID_PLANS = frozenset({"Pro", "Max", "Max 5x", "Max 20x", "Team", "Enterprise"})
+FREE_PLAN_RETRY_SECONDS = 24 * 3600.0
 
 
 class ClaudeProvider:
@@ -42,6 +44,8 @@ class ClaudeProvider:
         self._plan_key: str | None = None
         """查方案時用的 token 的 SHA-256（只在記憶體）；token 換了就重查。"""
         self._plan_due: datetime | None = None
+        self._plan_known = False
+        """最後一次查方案有成功（_plan 為 None 時用來分辨「沒有方案」和「查不到」）。"""
 
     def configure_cli_refresh(
         self, refresher: Callable[[], bool], enabled: Callable[[], bool]
@@ -118,15 +122,32 @@ class ClaudeProvider:
         if key == self._plan_key and self._plan_due is not None and now < self._plan_due:
             return self._plan
         if key != self._plan_key:
-            self._plan = None
+            self._plan, self._plan_known = None, False
         self._plan_key = key
         try:
             self._plan = parse_plan(api.get_profile(self._transport, token.value).json())
             self._plan_due = now + PLAN_TTL
+            self._plan_known = True
         except Exception as e:  # 包含 PollError、JSON 錯誤；只記類型，不記內容
             log.debug("查不到 Claude 訂閱方案：%s", type(e).__name__)
             self._plan_due = now + PLAN_RETRY
         return self._plan
+
+    def _raise_if_free_plan(self, token: Token, error: PollError) -> None:
+        """403 而帳號 API 說不是付費方案：Free 方案本來就沒有用量資料，不是登入問題。
+
+        查不到方案時不猜，照原本的「登入被拒絕」。
+        """
+        plan = self._plan_for(token)
+        if not self._plan_known or plan in PAID_PLANS:
+            return
+        raise PollError(
+            ErrKind.AUTH,
+            f"Claude {plan or 'Free'} 方案沒有用量資料（HTTP 403）",
+            reason=ErrReason.FREE_PLAN,
+            status=403,
+            retry_after=FREE_PLAN_RETRY_SECONDS,
+        ) from error
 
     def poll(self) -> Usage:
         token = self._token()
@@ -135,6 +156,8 @@ class ClaudeProvider:
         try:
             resp = api.get_usage(self._transport, token.value)
         except PollError as e:
+            if e.status == 403:
+                self._raise_if_free_plan(token, e)
             if e.kind is not ErrKind.UNSUPPORTED:
                 raise
             log.info("用量 API 不支援（HTTP %s），改用 Messages 備援", e.status)

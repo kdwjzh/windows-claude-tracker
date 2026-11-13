@@ -225,6 +225,10 @@ def test_moved_markers(tmp_path: Path) -> None:
         (PollError(ErrKind.AUTH, "登入被拒絕", status=401), "登入資訊無效"),
         (PollError(ErrKind.TRANSIENT, "連線逾時"), "網路或伺服器"),
         (PollError(ErrKind.UNSUPPORTED, "不支援", status=404), "回報"),
+        (
+            PollError(ErrKind.AUTH, "Free", status=403, reason=ErrReason.FREE_PLAN),
+            "Free 方案",
+        ),
     ],
 )
 def test_api_failure_gives_hint(tmp_path: Path, error: PollError, hint: str) -> None:

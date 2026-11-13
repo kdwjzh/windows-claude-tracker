@@ -9,7 +9,7 @@
 
 A **floating always-on-top Windows widget plus a tray icon** that periodically shows:
 
-- **Claude** (Pro/Max subscription): 5-hour and 7-day usage percentages and reset countdowns
+- **Claude** (Pro/Max subscription): 5-hour and 7-day usage percentages and reset countdowns. Claude shows usage only for paid plans: a Free account can't be tracked, and the widget says so (§3.3)
 - **Codex (ChatGPT account)**: 5-hour and long-window (weekly or monthly) usage percentages and reset countdowns
 
 ### Background
@@ -108,6 +108,8 @@ anthropic-beta: oauth-2025-04-20
 
 **Plan** (added 2026-11-13): `GET https://api.anthropic.com/api/oauth/profile` with the same headers. Only `organization.organization_type` (`claude_pro` → Pro, `claude_max` → Max, `claude_team` → Team, `claude_enterprise` → Enterprise; other `claude_xxx` → "Xxx") and, for Max, `organization.rate_limit_tier` (ending in `max_5x` / `max_20x` → "Max 5x" / "Max 20x") are read; the response also holds the email and name, which are never read, logged or stored. Called at start, when the token changes (compared by its SHA-256, in memory only) and every 24 hours; a failure only leaves `Usage.plan` empty (retried after 1 hour) and never fails the poll
 
+**Free plan** (added 2026-11-14): the usage API answers HTTP 403 for a Free account. On a 403 the provider looks up the plan; when the profile API answers and the plan isn't Pro / Max / Team / Enterprise, it raises `AUTH` with reason `FREE_PLAN` and `retry_after` 24 hours instead of "sign-in rejected". When the plan can't be read, the 403 stays `REJECTED`
+
 **Fallback** (only when the usage API returns a 4xx other than 401/403/429; 5xx never falls back):
 
 ```http
@@ -137,6 +139,7 @@ Read the response headers `anthropic-ratelimit-unified-{5h,7d}-utilization` (**0
 | No token found | Auth | Stop calling the API; compare the credential signature every 60 seconds and resume only when it changes |
 | Token expired | Auth | Same as above |
 | HTTP 401/403 | Auth | Same as above |
+| HTTP 403 on a Claude Free account (`FREE_PLAN`) | Auth, not an error to fix | Paused like auth, but also retried after 24 hours (`retry_after`); no notification, no red |
 | HTTP 429, 5xx | Transient | Exponential backoff `30s × 2^(n-1)`, capped at the poll interval; with `Retry-After`, use the larger value |
 | Connection failure, timeout | Transient | Same as above |
 | Other 4xx | Unsupported | Claude falls back to the Messages API |
@@ -223,6 +226,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
   - **Reset time passed** (no new data yet, for example right after waking from sleep): the bar empties and the text becomes 「已重置 · 更新中」/ "Reset · updating"; the tray bar and hover card show 0% too (added 2026-11-04)
   - **Limit reached**: the text becomes 「滿 · 20:15 重置」/ "Full · resets 20:15" (the local reset time)
   - **Can't find a sign-in**: the bar turns all gray `#4a4d55`, a red `!` follows, the text is `—`, and a red reason appears next to the column name (for example 「未登入」/ "Not signed in", `#f08b7d`); the other column is unaffected
+  - **Claude Free plan** (added 2026-11-14): badge 「FREE」, muted 「不支援」/ "Unsupported" next to the name, empty bars with `—`; hover card, dashboard status and diagnostics say Claude shows usage only for paid plans; no notification, no tray dot
   - **Stale data**: the bar turns dark green `#5f7d6c`, the text dims to `#7c8088`, and 「12 分鐘前」/ "12 min ago" appears next to the column name
   - **Only one service enabled**: the other column disappears and the widget narrows automatically
   - **Locked**: the drag handle becomes a lock icon

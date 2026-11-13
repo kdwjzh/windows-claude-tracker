@@ -200,6 +200,7 @@ def error_note(error: PollError, lang: Lang = Lang.ZH_TW) -> str:
         ErrReason.EXPIRED: "note_expired",
         ErrReason.REJECTED: "note_rejected",
         ErrReason.UNSUPPORTED: "note_unsupported",
+        ErrReason.FREE_PLAN: "note_unsupported",
     }.get(_reason(error), "note_offline")  # type: ignore[arg-type]
     return t(lang, key)
 
@@ -213,9 +214,18 @@ def error_detail(error: PollError, name: str, lang: Lang = Lang.ZH_TW) -> str:
     return t(lang, f"error_{reason.value}", name=name, status=status)
 
 
+def is_free_plan(state: ProviderState | None) -> bool:
+    """Claude Free 方案沒有用量資料：照實說明，但不算要處理的錯誤（不紅、不通知）。"""
+    return (
+        state is not None and state.error is not None and state.error.reason is ErrReason.FREE_PLAN
+    )
+
+
 def needs_action(state: ProviderState) -> bool:
-    """需要使用者處理（紅色）：認證錯誤，或從來沒成功過的錯誤。"""
-    return state.error is not None and (state.error.kind is ErrKind.AUTH or state.usage is None)
+    """需要使用者處理（紅色）：認證錯誤，或從來沒成功過的錯誤。Free 方案不算。"""
+    if state.error is None or is_free_plan(state):
+        return False
+    return state.error.kind is ErrKind.AUTH or state.usage is None
 
 
 # ---------------------------------------------------------------- 小工具
@@ -325,6 +335,11 @@ def build_column(
 
     windows = _windows(state.usage)
     badge = plan_badge(state.usage.plan) if state.usage else None
+    if is_free_plan(state):
+        note = error_note(state.error, lang)  # type: ignore[arg-type]
+        return ColumnVM(
+            pid, title, note, NoteKind.MUTED, rows(windows, RowStyle.EMPTY), hover, "FREE"
+        )
     if needs_action(state):
         assert state.error is not None
         note = error_note(state.error, lang)
@@ -569,6 +584,9 @@ def service_status(
         return ServiceStatusVM(t(lang, "status_disabled"), StatusKind.MUTED)
     if state is None:
         return ServiceStatusVM(t(lang, "loading"), StatusKind.MUTED)
+    if is_free_plan(state):
+        assert state.error is not None
+        return ServiceStatusVM(error_detail(state.error, name, lang), StatusKind.MUTED)
     if needs_action(state):
         assert state.error is not None
         text = t(
@@ -606,7 +624,7 @@ class AuthNotifier:
         for pid, name in providers:
             state = states.get(pid)
             error = state.error if state else None
-            if error is None or error.kind is not ErrKind.AUTH:
+            if error is None or error.kind is not ErrKind.AUTH or is_free_plan(state):
                 self._notified.discard(pid)
                 continue
             if pid in self._notified:

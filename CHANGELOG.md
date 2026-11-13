@@ -4,6 +4,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+
+- With a Claude Free account (for example in Claude Desktop), the widget showed "Sign-in rejected (HTTP 403)", a red dot and a sign-in notification, as if the sign-in were broken. Claude shows usage only for paid plans, so the usage API refuses Free accounts. The app now checks the plan on a 403 and, for Free, shows a 「FREE」 badge and a muted 「不支援」 / "Unsupported" with empty bars, explains it in the hover card, dashboard and diagnostics, and doesn't notify or add a tray dot. It checks again once a day (or when you sign in again), so upgrading to a paid plan starts tracking by itself
+
+### Changed
+
+- `ErrReason` has a new `FREE_PLAN` value; an `AUTH` error with `retry_after` now also resumes polling after that many seconds, not only when the credentials change
+
 ## [2.1.0] - 2026-11-13
 
 Shows per-model weekly limits such as Fable and your plan (Pro, Max, Plus, Free) for each service. From v2.0.0, use Settings → About → "Update now".

@@ -219,6 +219,21 @@ def test_auth_error_pauses_until_signature_changes() -> None:
     assert h.state("claude").error is None
 
 
+def test_auth_error_with_retry_after_also_resumes_after_that_time() -> None:
+    """Claude Free 方案（2026-11-14）：簽章沒變也要在 24 小時後再試，升級付費後會自己恢復。"""
+    free = PollError(ErrKind.AUTH, "Free 方案", status=403, retry_after=24 * 3600)
+    p = FakeProvider("claude", [free, usage()], signature="same")
+    h = Harness(p)
+    h.tick()
+    h.clock.advance(23 * 3600 + 3540)
+    h.tick()
+    assert p.poll_count == 1  # 還沒滿 24 小時、簽章也沒變
+    h.clock.advance(60)
+    h.tick()
+    assert p.poll_count == 2
+    assert h.state("claude").error is None
+
+
 def test_auth_error_keeps_usage_stale() -> None:
     p = FakeProvider("claude", [usage(), auth()])
     h = Harness(p)
