@@ -14,7 +14,7 @@ venv/
 coverage.xml
 htmlcov/
 
-# 打包產物（*.spec 要保留）
+# 打包產物（spec 由 build.ps1 產生在 build\，不需保留）
 build/
 dist/
 
