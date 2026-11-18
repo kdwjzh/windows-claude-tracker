@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build.ps1   # 打包到 dist\
    git push --tags
    ```
 
-GitHub Actions 會自動跑完所有檢查、打包，並建立 Release（附兩個 exe、`THIRD_PARTY_LICENSES.txt` 與 `SHA256SUMS.txt`，說明取自 CHANGELOG）。標籤含 `-`（例如 `v1.2.0-beta.1`）會標成 pre-release。
+GitHub Actions 會自動跑完所有檢查、打包，並建立 Release（附 `ClaudeUsageTracker-vX.Y.Z.exe`、`THIRD_PARTY_LICENSES.txt` 與 `SHA256SUMS.txt`，說明取自 CHANGELOG）。標籤含 `-`（例如 `v1.2.0-beta.1`）會標成 pre-release。
 
 如果想先在本機打包試跑：`scripts\build.ps1` 會產生 `dist\ClaudeUsageTracker.exe` 與 `dist\THIRD_PARTY_LICENSES.txt`。程式圖示 `assets\app.ico` 是設計好的檔案，不由程式產生；要換圖示就直接替換這個檔案（需含 16–256px 共 9 種尺寸）。
 
