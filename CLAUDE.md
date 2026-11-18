@@ -347,6 +347,7 @@ windows_Claude-usage-monitor/
 ├─ docs/
 │  ├─ algorithms.md            algorithm reference: token sources, desktop decryption, API formats, error classification
 │  ├─ design/                  UI designs (the 5 v1 PNGs, see §3.7)
+│  ├─ images/                  widget screenshots used by the READMEs
 │  └─ decisions/               architecture decision records (ADRs), one decision per file
 ├─ src/usage_monitor/
 │  ├─ __main__.py              entry point: python -m usage_monitor (sets the AppUserModelID first)
@@ -361,6 +362,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ levels.py             percentage → level (ok / warn / crit); the 70/90 thresholds live only here
 │  │  ├─ timefmt.py            countdown text 「2時13分」/ "2h 13m", reset times (per language)
 │  │  ├─ i18n.py               Lang, language detection, translation tables and t() (§3.8)
+│  │  ├─ json_access.py        tolerant JSON field access for undocumented APIs (None on missing or wrong type)
 │  │  └─ windows.py            limit_window_seconds → labels "5h / 7d / 30d"
 │  │
 │  ├─ providers/               ② one folder per service; services never import each other
@@ -385,6 +387,9 @@ windows_Claude-usage-monitor/
 │  │  ├─ app_identity.py       SetCurrentProcessExplicitAppUserModelID (failures are only logged)
 │  │  ├─ oscrypt.py            DPAPI + AES-GCM
 │  │  ├─ http.py               RequestsTransport (implements Transport)
+│  │  ├─ clock.py              SystemClock (implements Clock)
+│  │  ├─ cli_refresh.py        runs `claude -p . --no-session-persistence` to refresh an expired CLI token (off by default)
+│  │  ├─ launch.py             opens files, folders and URLs with the default program
 │  │  ├─ autostart.py
 │  │  ├─ relaunch.py           "Update now" handover: start the new exe, delete the replaced one (ADR 0007)
 │  │  ├─ single_instance.py
@@ -397,6 +402,7 @@ windows_Claude-usage-monitor/
 │  ├─ services/                ③ application logic: no Qt imports, testable on Linux
 │  │  ├─ scheduler.py          independent polling, backoff and auth pause per service
 │  │  ├─ state_store.py        holds each service's ProviderState and notifies subscribers on change
+│  │  ├─ subscribers.py        subscriber list where one failing subscriber doesn't stop the others
 │  │  ├─ update_check.py       queries the latest GitHub Release (through Transport) and produces UpdateState
 │  │  ├─ self_update.py        "Update now": downloads the new exe and SHA256SUMS.txt, verifies, writes next to the old exe
 │  │  ├─ history.py            usage history in sqlite3 (subscribes to StateStore)
@@ -411,6 +417,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ viewmodel.py          ProviderState → WidgetVM / TrayVM (pure functions, testable)
 │  │  ├─ usage_vm.py           usage history → Usage page charts and average (pure functions, testable)
 │  │  ├─ bridge.py             turns services callbacks into Qt signals delivered on the main thread
+│  │  ├─ controller.py         wires widget, tray, hover card, settings and scheduler together (main thread)
 │  │  ├─ widget/
 │  │  │  ├─ widget.py          the widget window (event handling)
 │  │  │  ├─ painter.py         draws from WidgetVM

@@ -91,6 +91,8 @@ Run diagnostics first: Settings → Advanced → "Run diagnostics" (also offered
 | Symptom | Likely cause and fix |
 | --- | --- |
 | "Not signed in" next to the service name | No token found: open Claude Desktop (or the `claude` CLI) and sign in; it recovers within a minute |
+| "Rejected" next to the service name | The server refused the sign-in (HTTP 401/403): sign in again in Claude Desktop (or the `claude` CLI); if it stays, run diagnostics |
+| "Unsupported" next to Claude, with a "FREE" badge | Claude shows usage only for paid plans (Pro/Max/Team/Enterprise); the app checks again once a day and starts tracking by itself after you upgrade |
 | "Expired" | Open Claude Desktop so it refreshes the sign-in; if you only use the CLI, turn on "Allow CLI token refresh" |
 | Diagnostics says "DPAPI couldn't decrypt the key" | The app isn't running as the user signed in to Windows (for example, run as administrator); start it with a normal double-click |
 | Numbers are dimmed and "12 min ago" appears next to the service name | The network or server is temporarily unavailable; you're seeing the last numbers and they update once it recovers. On a corporate network, make sure `api.anthropic.com` is reachable |

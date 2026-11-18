@@ -20,6 +20,8 @@ For example:
 - A token, or part of one beyond the masked form, written to the log, the settings file, diagnostics output, a tooltip or anywhere else on disk
 - A token sent anywhere other than `api.anthropic.com` (Claude) or `chatgpt.com` (Codex)
 - The update check sending anything to `api.github.com` beyond the request for the latest release
+- "Update now" downloading from anywhere other than this repository's release assets on `github.com` and the `*.githubusercontent.com` hosts it redirects to, or running a file whose SHA-256 doesn't match the release's `SHA256SUMS.txt`
+- Account details from the Claude profile API (anything beyond the plan) being logged or stored
 - The app modifying Claude or Codex files, or using a refresh token
 
 ## Supported versions

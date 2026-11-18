@@ -167,6 +167,7 @@ On failure, `provider.poll()` raises only `PollError(kind, message, reason=…, 
 | No token found | `AUTH` | `NO_CREDENTIALS` | Pause; compare the credential signature every 60 seconds and resume only when it changes |
 | Token expired | `AUTH` | `EXPIRED` | Same as above |
 | HTTP 401/403 | `AUTH` | `REJECTED` | Same as above |
+| Claude HTTP 403 on a Free account (§4.2) | `AUTH` | `FREE_PLAN` | Same as above, and also retried after 24 hours (`retry_after`); no notification |
 | HTTP 429 | `TRANSIENT` | `RATE_LIMITED` | Exponential backoff |
 | HTTP 5xx | `TRANSIENT` | `SERVER` | Exponential backoff |
 | Connection timeout | `TRANSIENT` | `TIMEOUT` | Exponential backoff |
