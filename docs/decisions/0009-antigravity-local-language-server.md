@@ -29,4 +29,5 @@ In Antigravity 2.34.0 the csrf token is no longer on the language server's comma
 
 - Scanning process command lines for `--csrf_token`: doesn't work from 2.34.0 on
 - Calling the language server from inside Antigravity's window (devtools protocol) for versions whose hub file has no token: too intrusive; if that happens the column says "Not running"
+- Reading the Google access token Antigravity keeps in the Windows Credential Manager (`gemini:antigravity`) while Antigravity is closed, and asking the cloud API until it expires: rejected on 2026-11-23 (maintainer's choice). It only adds about an hour, since Google access tokens are short-lived, and adds a second data path, a new host and credential reading for that
 - One widget column per group: makes the widget much wider and turns one service into two

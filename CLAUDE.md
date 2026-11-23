@@ -328,6 +328,7 @@ Details in `docs/algorithms.md` §7.
 - `Usage.session` / `long` = the highest `5h` / `weekly` bucket across groups; every bucket goes into `Usage.scoped`, labeled 「Gem」 (Gemini), 「C/G」 (Claude and GPT), otherwise the first word of the group name, with ` 5h` / ` 7d` appended when any 5h bucket exists (maintainer's choice of labels)
 - Plan: only `userStatus.userTier.id` `g1-<plan>-tier` (→ "Plus", "Pro", "Ultra Lite"); `planInfo.planName` is wrong (a Plus account says "Pro"); the email and name in that response are never read
 - Not running → `AUTH` / `NOT_RUNNING` (quiet, like the Claude Free plan); the credential signature is the hub files, so polling resumes when Antigravity starts
+- **Only while Antigravity is running** (maintainer's choice, 2026-11-23): no fallback to the Google token in the Credential Manager, even before it expires (ADR 0009)
 
 ---
 
