@@ -1,7 +1,7 @@
 # CLAUDE.md: Claude / Codex / Antigravity usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
-> Version: matches app v2.1.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
+> Version: matches app v2.2.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
 
 ---
 
@@ -637,7 +637,7 @@ Progress and per-version details are in `CHANGELOG.md`.
 | 12 Dashboard and usage history | "Open dashboard", AI services to monitor, continuous bars, service name colors (v1.1.0–v1.3.0); usage history in `history.db` and the Usage page, tray icon following the service in use, sleep/resume refresh (v2.0.0) | v1.1.0–v2.0.0 |
 | 13 Update now and single exe | Diagnostics inside the app, one exe per release (ADR 0006); "Update now" downloads, verifies and swaps the exe in place, with progress and an "updated" notification; daily new-version reminder (ADR 0007) | v2.0.0 |
 | 14 Per-model limits and plans | Per-model weekly limits such as Fable in the hover card and tooltip (ADR 0008); plan badges (Pro, Max 5x, Plus, Free) next to the service names | v2.1.0 |
-| 15 Antigravity | Antigravity quota from its local language server, grouped rows for the weekly-only plan, plan badge (ADR 0009) | Unreleased |
+| 15 Antigravity | Antigravity quota from its local language server, grouped rows for the weekly-only plan, plan badge (ADR 0009); Claude Free accounts shown as unsupported | v2.2.0 |
 
 ### Possible future work
 
