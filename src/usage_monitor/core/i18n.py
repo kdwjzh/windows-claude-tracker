@@ -47,6 +47,7 @@ _ZH_TW: dict[str, str] = {
     "note_rejected": "被拒絕",
     "note_unsupported": "不支援",
     "note_offline": "連線失敗",
+    "note_not_running": "未開啟",
     "hover_hint": "雙擊立即更新",
     "hover_source": "來源：{source}",
     "hover_updated": "最後更新 {time}",
@@ -65,12 +66,14 @@ _ZH_TW: dict[str, str] = {
     "error_timeout": "連線逾時",
     "error_unsupported": "用量 API 不支援這個帳號（HTTP {status}）",
     "error_free_plan": "Claude 只提供付費方案（Pro／Max）的用量，Free 方案無法顯示",
+    "error_not_running": "Antigravity 沒有開啟：開啟後會自動顯示用量",
     "error_bad_response": "回應格式不認得",
     "error_unexpected": "發生未預期的錯誤",
     # 資料來源（source_label 代碼）
     "source_desktop": "桌面版",
     "source_cli": "CLI",
     "source_codex_cli": "Codex CLI",
+    "source_antigravity": "Antigravity",
     # 系統匣與通知
     "tray_stale": "(舊)",
     "tray_none": "沒有啟用任何服務",
@@ -166,7 +169,8 @@ _ZH_TW: dict[str, str] = {
     "about_license": "授權",
     "about_license_value": "MIT",
     "about_disclaimer": (
-        "非官方工具，與 Anthropic、OpenAI 無關；Claude、ChatGPT、Codex 為其各自擁有者的商標。"
+        "非官方工具，與 Anthropic、OpenAI、Google 無關；"
+        "Claude、ChatGPT、Codex、Antigravity 為其各自擁有者的商標。"
     ),
     "section_version": "版本與更新",
     "section_project": "專案",
@@ -267,6 +271,7 @@ _ZH_TW: dict[str, str] = {
     "diag_problem_expired": "桌面版的 token 都已過期：開啟 Claude 桌面版讓它自動更新登入",
     "diag_hint_auth": "登入資訊無效或被拒絕：開啟 Claude 桌面版確認已登入",
     "diag_hint_free_plan": "這個帳號是 Free 方案：Claude 只提供付費方案的用量，小工具無法顯示",
+    "diag_hint_not_running": "Antigravity 沒有開啟：開啟 Antigravity 後再試一次",
     "diag_hint_transient": (
         "網路或伺服器暫時有問題：稍後再試；公司網路請確認能連到 api.anthropic.com"
     ),
@@ -286,6 +291,7 @@ _EN: dict[str, str] = {
     "note_rejected": "Rejected",
     "note_unsupported": "Unsupported",
     "note_offline": "Offline",
+    "note_not_running": "Not running",
     "hover_hint": "Double-click to refresh",
     "hover_source": "Source: {source}",
     "hover_updated": "Updated {time}",
@@ -303,11 +309,13 @@ _EN: dict[str, str] = {
     "error_timeout": "Connection timed out",
     "error_unsupported": "Usage API not supported for this account (HTTP {status})",
     "error_free_plan": "Claude shows usage only for paid plans (Pro/Max), not for Free",
+    "error_not_running": "Antigravity isn't running; usage appears once you open it",
     "error_bad_response": "Unrecognized response",
     "error_unexpected": "Unexpected error",
     "source_desktop": "Desktop app",
     "source_cli": "CLI",
     "source_codex_cli": "Codex CLI",
+    "source_antigravity": "Antigravity",
     "tray_stale": " (stale)",
     "tray_none": "No services enabled",
     "tray_error_line": "{name}: {note}",
@@ -409,8 +417,8 @@ _EN: dict[str, str] = {
     "about_license": "License",
     "about_license_value": "MIT",
     "about_disclaimer": (
-        "Unofficial tool, not affiliated with Anthropic or OpenAI. "
-        "Claude, ChatGPT and Codex are trademarks of their respective owners."
+        "Unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, "
+        "Codex and Antigravity are trademarks of their respective owners."
     ),
     "section_version": "Version and updates",
     "section_project": "Project",
@@ -527,6 +535,7 @@ _EN: dict[str, str] = {
     "diag_problem_expired": (
         "All of the desktop app's tokens have expired: open Claude Desktop so it renews the sign-in"
     ),
+    "diag_hint_not_running": "Antigravity isn't running: open Antigravity and try again",
     "diag_hint_free_plan": (
         "This account is on the Free plan: Claude shows usage only for paid plans, "
         "so the widget can't show it"

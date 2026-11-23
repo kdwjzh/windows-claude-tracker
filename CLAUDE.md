@@ -1,4 +1,4 @@
-# CLAUDE.md: Claude / Codex usage monitor (Python) — handover notes
+# CLAUDE.md: Claude / Codex / Antigravity usage monitor (Python) — handover notes
 
 > For Claude Code: read this whole file before starting any work. This file holds the specs, decisions and rules; algorithm details (tokens, decryption, API formats) are in `docs/algorithms.md`. If the two disagree, this file wins.
 > Version: matches app v2.1.0 | Maintainer: kdwjzh | **Reply to the maintainer in Traditional Chinese**
@@ -11,6 +11,7 @@ A **floating always-on-top Windows widget plus a tray icon** that periodically s
 
 - **Claude** (Pro/Max subscription): 5-hour and 7-day usage percentages and reset countdowns. Claude shows usage only for paid plans: a Free account can't be tracked, and the widget says so (§3.3)
 - **Codex (ChatGPT account)**: 5-hour and long-window (weekly or monthly) usage percentages and reset countdowns
+- **Antigravity** (added 2026-11-23, ADR 0009): 5-hour and weekly quota from its local language server, only while Antigravity is running (§3.10)
 
 ### Background
 
@@ -22,7 +23,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 - No macOS/Linux support (but the pure logic in `core/` and `providers/` must be testable on Linux)
 - No theme engine (internationalization was added to scope on 2026-10-30, see §3.8)
 - No automatic background download: the update check only **checks and reminds**; the new version is downloaded only when the user presses "Update now" in About (§3.9, ADR 0007, revised 2026-11-05). No installer: the app stays a single portable exe
-- No other services such as Antigravity, Cursor, Grok, Copilot or OpenCode (but the architecture must allow adding one without changing existing code, see §4.3)
+- No other services such as Cursor, Grok, Copilot or OpenCode (but the architecture must allow adding one without changing existing code, see §4.3)
 - No multiple accounts (one Claude account + one Codex account)
 - No reading `~/.claude/.credentials.json` inside WSL; no extra usage (`spend`) (decided 2026-10-31); per-model weekly limits (`weekly_scoped`, for example Fable) are shown in the hover card and tray tooltip only, never as widget rows (revised 2026-11-13, ADR 0008)
 
@@ -184,7 +185,9 @@ class ProviderState:  # maintained by the services layer; the UI only reads this
     usage: Usage | None  # last successful data
     error: PollError | None  # last error; None on success
     stale: bool  # usage is old (the last poll failed)
-    source_label: str | None  # "desktop" / "cli" / "codex_cli"; translated by the UI, never a token
+    source_label: (
+        str | None
+    )  # "desktop" / "cli" / "codex_cli" / "antigravity"; translated by the UI, never a token
 ```
 
 Every dataclass is `frozen=True`: once created, data can't be quietly changed by another module.
@@ -216,7 +219,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 ```
 
 - Dark panel `#232428`, 1 px border `#3a3c42`, 8 px corner radius; a 3 px drag handle `#5b5f67` on the left; a 1 px divider between the two columns
-- **Each column shows the service name on top** (10 px) in the service's own color: Claude orange `#e08a5f`, Codex white `#ffffff` (light theme: `#c25a2c` / `#1f1f1f`); any other service uses `#a0a4ab`. **When adding a new service, ask the maintainer which color it should use**; without an answer, keep the default (colors live in `Palette.provider_titles`, decided 2026-11-02); **each column shows its own period labels** (Codex may show `30d`)
+- **Each column shows the service name on top** (10 px) in the service's own color: Claude orange `#e08a5f`, Codex white `#ffffff`, Antigravity blue `#5b9cff` (light theme: `#c25a2c` / `#1f1f1f` / `#1a5fd0`); any other service uses `#a0a4ab`. **When adding a new service, ask the maintainer which color it should use**; without an answer, keep the default (colors live in `Palette.provider_titles`, decided 2026-11-02); **each column shows its own period labels** (Codex may show `30d`)
 - **Plan badge** (added 2026-11-13): right after the service name, a small badge with the plan (`Usage.plan`, letters uppercased: 「PRO」「MAX 5x」「FREE」): 8 px bold text with a 1 px rounded outline, both in the service's title color, 11 px tall, 3 px padding, 4 px after the name; the status text (「未登入」, 「12 分鐘前」) follows the badge. **The badge never widens the widget**: column widths ignore it, and when it doesn't fit it isn't drawn (maintainer's choice). The hover card title becomes 「Claude · Pro」; the tray tooltip has no plan
 - Each row (16 px tall, 11 px text): label (at least 21 px wide) + 10-segment bar (each segment 6×11 px, 2 px gap, 2 px radius; sizes reduced on 2026-11-02 to make the widget smaller) + (a red `!` only on error) + text (about 92–112 px wide, enough for at least 「滿 · 20:15 重置」/ "Full · resets 20:15")
 - Bar fill: **each 1% fills a tenth of a segment**, left to right (42% → 4 full segments + 2/10 of the fifth; 0% → empty); the percentage is rounded to a whole number first so the bar matches the text (decided 2026-11-02)
@@ -227,6 +230,8 @@ The UI text examples below are in Traditional Chinese because the designs are; e
   - **Limit reached**: the text becomes 「滿 · 20:15 重置」/ "Full · resets 20:15" (the local reset time)
   - **Can't find a sign-in**: the bar turns all gray `#4a4d55`, a red `!` follows, the text is `—`, and a red reason appears next to the column name (for example 「未登入」/ "Not signed in", `#f08b7d`); the other column is unaffected
   - **Claude Free plan** (added 2026-11-14): badge 「FREE」, muted 「不支援」/ "Unsupported" next to the name, empty bars with `—`; hover card, dashboard status and diagnostics say Claude shows usage only for paid plans; no notification, no tray dot
+  - **Antigravity not running** (added 2026-11-23): muted 「未開啟」/ "Not running" next to the name, empty bars with `—`; no notification, no tray dot
+  - **Grouped rows** (added 2026-11-23): when a service reports no short window and exactly two `Usage.scoped` windows (Antigravity's free / Google AI Plus quota: weekly per model group), the two rows show those windows with their labels (「Gem」, 「C/G」) instead of 5h / 7d; the hover card then lists only those, and the tray tooltip doesn't repeat them. The tray icon, Usage page and history still use the short / long windows
   - **Stale data**: the bar turns dark green `#5f7d6c`, the text dims to `#7c8088`, and 「12 分鐘前」/ "12 min ago" appears next to the column name
   - **Only one service enabled**: the other column disappears and the widget narrows automatically
   - **Locked**: the drag handle becomes a lock icon
@@ -258,7 +263,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
 - General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": 「自動（最近使用的）」/ "Auto (most recently used)" / Claude / Codex)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
-- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0… 45%" (percent shown when the server reports the size) / "Starting v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners." and the Chinese equivalent)
+- About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0… 45%" (percent shown when the server reports the size) / "Starting v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, Codex and Antigravity are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
 
 **Window attributes**
@@ -312,6 +317,17 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Once running, the new exe shows one notification 「用量監控已更新到 vX.Y.Z」/ "Usage Monitor updated to vX.Y.Z" (clicking it opens About); only when started with `--replaced` from the packaged exe, so only after a successful update (added 2026-11-06)
 - Any failure (no assets, network, HTTP error, checksum, unwritable folder, can't start the new exe) shows 「更新失敗，請按「前往下載」手動更新」/ "Update failed. Use Download to update by hand" and keeps the old version running; details go to the log
 - All UI text ("Version … is available", "You're up to date", "Can't check right now" and so on) goes through `t()` in `core/i18n.py`, in both languages (§3.8)
+
+### 3.10 Antigravity (added 2026-11-23, ADR 0009)
+
+Details in `docs/algorithms.md` §7.
+
+- Source: the newest `%USERPROFILE%\.gemini\antigravity\daemon\hub_*.json` whose `pid` is still running (`httpPort`, `csrfToken`); a crashed Antigravity leaves its file behind. Antigravity 2.34.0 no longer puts the csrf token on the language server's command line, so never scan processes for it
+- Calls `POST http://127.0.0.1:<httpPort>/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary` (and `GetUserStatus` for the plan) with `X-Codeium-Csrf-Token`, body `{}`. **Never** use Antigravity's Google sign-in or Google's cloud quota API: that needs the refresh token (§5.1 rule 3)
+- `remainingFraction` is what's **left** (0–1); missing with a future `resetTime` means fully used
+- `Usage.session` / `long` = the highest `5h` / `weekly` bucket across groups; every bucket goes into `Usage.scoped`, labeled 「Gem」 (Gemini), 「C/G」 (Claude and GPT), otherwise the first word of the group name, with ` 5h` / ` 7d` appended when any 5h bucket exists (maintainer's choice of labels)
+- Plan: only `userStatus.userTier.id` `g1-<plan>-tier` (→ "Plus", "Pro", "Ultra Lite"); `planInfo.planName` is wrong (a Plus account says "Pro"); the email and name in that response are never read
+- Not running → `AUTH` / `NOT_RUNNING` (quiet, like the Claude Free plan); the credential signature is the hub files, so polling resumes when Antigravity starts
 
 ---
 
@@ -376,11 +392,16 @@ windows_Claude-usage-monitor/
 │  │  │     ├─ desktop.py      DesktopCredentialSource (decryption, token selection)
 │  │  │     ├─ desktop_paths.py  desktop candidate path rules (if the paths move again, only this changes)
 │  │  │     └─ scopes.py       entry_scopes(), select_token() (pure functions)
-│  │  └─ codex/
+│  │  ├─ codex/
+│  │  │  ├─ provider.py
+│  │  │  ├─ api.py
+│  │  │  ├─ parse.py
+│  │  │  └─ credentials.py
+│  │  └─ antigravity/        local language server (§3.10)
 │  │     ├─ provider.py
+│  │     ├─ hub.py           finds the running server from hub_*.json
 │  │     ├─ api.py
-│  │     ├─ parse.py
-│  │     └─ credentials.py
+│  │     └─ parse.py
 │  │
 │  ├─ platform/                ② Windows adapter layer: every ctypes / winreg call lives here
 │  │  ├─ paths.py              APPDATA / LOCALAPPDATA / USERPROFILE, location of assets/app.ico (including the packaged build)
@@ -396,6 +417,7 @@ windows_Claude-usage-monitor/
 │  │  ├─ hotkey.py             RegisterHotKey
 │  │  ├─ fullscreen.py         whether the foreground window is full screen
 │  │  ├─ power.py              recognizes the resume-from-sleep message (WM_POWERBROADCAST)
+│  │  ├─ process.py            whether a pid is still running (stale Antigravity hub files)
 │  │  ├─ ui_language.py        Windows display language without Qt (for diagnose)
 │  │  └─ topmost.py            WS_EX_NOACTIVATE, re-assert TOPMOST
 │  │
@@ -526,7 +548,7 @@ Scheduler (background thread)
 2. **Read only**: never modify any Claude or Codex file.
    The usage history (`history.db`) stores only service ids, percentages and times: never tokens, account ids or anything else.
 3. **Never use the refresh token**.
-4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`. Of the Claude profile API (§3.3) only the two plan fields are read; account details in it are never logged or stored. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
+4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`; Antigravity's csrf token only to `127.0.0.1`, never through a proxy (`platform/http.py` enforces both). Of the Claude profile API (§3.3) only the two plan fields are read; account details in it are never logged or stored. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
 
 ### 5.2 Stability
 
@@ -613,6 +635,7 @@ Progress and per-version details are in `CHANGELOG.md`.
 | 12 Dashboard and usage history | "Open dashboard", AI services to monitor, continuous bars, service name colors (v1.1.0–v1.3.0); usage history in `history.db` and the Usage page, tray icon following the service in use, sleep/resume refresh (v2.0.0) | v1.1.0–v2.0.0 |
 | 13 Update now and single exe | Diagnostics inside the app, one exe per release (ADR 0006); "Update now" downloads, verifies and swaps the exe in place, with progress and an "updated" notification; daily new-version reminder (ADR 0007) | v2.0.0 |
 | 14 Per-model limits and plans | Per-model weekly limits such as Fable in the hover card and tooltip (ADR 0008); plan badges (Pro, Max 5x, Plus, Free) next to the service names | v2.1.0 |
+| 15 Antigravity | Antigravity quota from its local language server, grouped rows for the weekly-only plan, plan badge (ADR 0009) | Unreleased |
 
 ### Possible future work
 

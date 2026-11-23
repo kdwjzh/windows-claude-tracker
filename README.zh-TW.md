@@ -2,9 +2,9 @@
 
 [English](README.md) | **繁體中文**
 
-Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱）與 **Codex**（ChatGPT 帳號）的用量百分比與重置倒數，也支援 Claude 桌面版。
+Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱）、**Codex**（ChatGPT 帳號）與 **Antigravity** 的用量百分比與重置倒數，也支援 Claude 桌面版。
 
-> 本專案為非官方工具，與 Anthropic、OpenAI 無關；Claude、ChatGPT、Codex 為其各自擁有者的商標。
+> 本專案為非官方工具，與 Anthropic、OpenAI、Google 無關；Claude、ChatGPT、Codex、Antigravity 為其各自擁有者的商標。
 
 ```
 ┃ Claude                          │ Codex
@@ -16,6 +16,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 - 每個服務名稱旁邊顯示你的方案（Pro、Max 5x、Plus、Free…）
 - Claude 只提供付費方案（Pro／Max）的用量：Free 帳號的 Claude 欄會顯示「不支援」
+- Antigravity（預設關閉，在「AI 監控對象」打開）：Antigravity 開著時才會顯示。免費／Google AI Plus 方案只有每週限制，兩列改成模型分組：`Gem`（Gemini）和 `C/G`（Claude 和 GPT）
 - 綠色 < 70%、黃色 70–89%、紅色 ≥ 90%；滑鼠停在小工具上會顯示確切的重置時刻，以及 Fable 這類模型專屬的每週限制
 - 儀表板「用量」頁：過去 7 天的 5 小時用量、每個 7 天（或 30 天）週期的最高用量，以及最近的平均
 - 系統匣圖示（小工具隱藏時看這裡）、全螢幕時自動隱藏、`Ctrl+Alt+U` 顯示／隱藏
@@ -54,11 +55,12 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 | --- | --- | --- |
 | Claude | ① Claude Code CLI：`%USERPROFILE%\.claude\.credentials.json`（未過期才用）<br>② Claude 桌面版：`%LOCALAPPDATA%\Claude-Data\claude_*`、`%APPDATA%\Claude\`、Store 版舊路徑 | `api.anthropic.com/api/oauth/usage` |
 | Codex | `%USERPROFILE%\.codex\auth.json`（或 `%CODEX_HOME%`） | `chatgpt.com/backend-api/wham/usage` |
+| Antigravity | `%USERPROFILE%\.gemini\antigravity\daemon\hub_*.json`（執行中的 Antigravity 寫的；不使用 Google 登入） | Antigravity 自己在 `127.0.0.1` 的 language server |
 
 隱私與安全：
 
 - 只**讀取**這些檔案，從不修改，也從不使用 refresh token（不會讓官方 App 被登出）
-- token 只送到 `api.anthropic.com` 與 `chatgpt.com`；不寫進 log、設定檔或任何地方
+- token 只送到 `api.anthropic.com` 與 `chatgpt.com`（Antigravity 的本機 token 只送到你電腦上的 `127.0.0.1`）；不寫進 log、設定檔或任何地方
 - 用量歷史（`%APPDATA%\MyUsageMonitor\history.db`）只存每次更新的百分比與時間，保留 90 天，只在你的電腦上；設定 → 進階 →「清除用量歷史」可以刪除
 - 預設每 5 分鐘查一次；這些用量 API 沒有公開文件，格式改變時可能暫時顯示不出來
 
@@ -96,6 +98,7 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 | 顯示「已過期」 | 開啟 Claude 桌面版讓它自動更新登入；只用 CLI 的話可開「允許 CLI 更新 token」 |
 | 診斷顯示「DPAPI 解金鑰失敗」 | 程式不是以登入 Windows 的同一個使用者執行（例如用系統管理員執行）；改用一般方式雙擊執行 |
 | 數字變暗、欄名旁顯示「12 分鐘前」 | 暫時連不上網路或伺服器忙碌，顯示的是上次的數字，恢復後會自動更新；公司網路請確認能連到 `api.anthropic.com` |
+| Antigravity 旁顯示「未開啟」 | Antigravity 沒有開著；打開後一分鐘內就會顯示 |
 | Codex 的 5h 顯示 0% | 你的方案只有長週期（例如 30 天）額度，沒有 5 小時視窗 |
 | 快捷鍵沒反應、設定裡顯示紅字 | 被其他程式佔用，請在設定裡換一組 |
 | 小工具不見了 | 系統匣左鍵或 `Ctrl+Alt+U` 叫出來；跑到螢幕外的話，系統匣右鍵 →「重設位置」 |
@@ -135,4 +138,4 @@ GitHub Actions 會自動跑完所有檢查、打包，並建立 Release（附 `C
 
 本專案以 [MIT](LICENSE) 授權釋出。exe 內含的第三方元件（PySide6／Qt 採 LGPL-3.0，以及 requests、cryptography、truststore 等）的授權，列在每個 Release 附的 `THIRD_PARTY_LICENSES.txt`。
 
-本專案為非官方工具，與 Anthropic、OpenAI 無關；Claude、ChatGPT、Codex 為其各自擁有者的商標。
+本專案為非官方工具，與 Anthropic、OpenAI、Google 無關；Claude、ChatGPT、Codex、Antigravity 為其各自擁有者的商標。

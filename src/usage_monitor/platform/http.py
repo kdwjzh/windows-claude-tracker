@@ -1,6 +1,7 @@
 """requests 實作的 Transport。
 
-安全：token 只能送到 api.anthropic.com 與 chatgpt.com（CLAUDE.md §5.1 第 4 條），
+安全：token 只能送到 api.anthropic.com 與 chatgpt.com，Antigravity 的 csrf token
+只能送到 127.0.0.1（CLAUDE.md §5.1 第 4 條）；
 帶 Authorization 的請求送往其他主機會直接拒絕；也不跟隨轉址，避免 token 被帶到別處。
 """
 
@@ -17,6 +18,8 @@ from usage_monitor.core.errors import ErrKind, ErrReason, PollError
 from usage_monitor.core.interfaces import Progress, Response
 
 ALLOWED_HOSTS = frozenset({"api.anthropic.com", "chatgpt.com"})
+LOOPBACK = "127.0.0.1"
+"""Antigravity 的本機 language server（CLAUDE.md §3.10）：只有這裡可以用 http。"""
 USER_AGENT = f"usage-monitor/{__version__}"
 CHUNK = 64 * 1024
 
@@ -32,11 +35,14 @@ def inject_truststore() -> None:
 
 def _check_destination(url: str, headers: Mapping[str, str]) -> None:
     parts = urlsplit(url)
-    if parts.scheme != "https":
+    loopback = parts.hostname == LOOPBACK
+    if parts.scheme != "https" and not (loopback and parts.scheme == "http"):
         raise ValueError(f"只允許 https：{parts.scheme}")
-    has_auth = any(k.lower() == "authorization" for k in headers)
-    if has_auth and parts.hostname not in ALLOWED_HOSTS:
+    names = {k.lower() for k in headers}
+    if "authorization" in names and parts.hostname not in ALLOWED_HOSTS:
         raise ValueError(f"不允許把 token 送到 {parts.hostname}")
+    if "x-codeium-csrf-token" in names and not loopback:
+        raise ValueError(f"不允許把 Antigravity token 送到 {parts.hostname}")
 
 
 class RequestsTransport:
@@ -67,9 +73,12 @@ class RequestsTransport:
     ) -> Response:
         _check_destination(url, headers)
         try:
+            # 本機請求不走 proxy：不然 csrf token 會被送到公司的 proxy
+            proxies = {"http": None, "https": None} if urlsplit(url).hostname == LOOPBACK else None
             r = self._session.request(
                 method, url, headers=dict(headers), json=json, timeout=timeout,
                 allow_redirects=False, stream=on_progress is not None,
+                proxies=proxies,  # pyright: ignore[reportArgumentType]  # None = 不用 proxy（requests 文件寫法）
             )  # fmt: skip
             if on_progress is not None and r.status_code == 200:
                 body = _read_with_progress(r, on_progress)

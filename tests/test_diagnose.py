@@ -229,6 +229,7 @@ def test_moved_markers(tmp_path: Path) -> None:
             PollError(ErrKind.AUTH, "Free", status=403, reason=ErrReason.FREE_PLAN),
             "Free 方案",
         ),
+        (PollError(ErrKind.AUTH, "沒開", reason=ErrReason.NOT_RUNNING), "開啟 Antigravity"),
     ],
 )
 def test_api_failure_gives_hint(tmp_path: Path, error: PollError, hint: str) -> None:

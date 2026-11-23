@@ -35,6 +35,8 @@ class ErrReason(Enum):
     UNSUPPORTED = "unsupported"
     FREE_PLAN = "free_plan"
     """Claude Free 方案：用量 API 回 403，Claude 只給付費方案看用量。不算需要處理的錯誤。"""
+    NOT_RUNNING = "not_running"
+    """Antigravity 沒開：本機查不到 language server。照實說明，不算需要處理的錯誤。"""
     BAD_RESPONSE = "bad_response"
     """格式錯誤、沒有任何用量視窗、非預期的狀態碼。"""
     UNEXPECTED = "unexpected"

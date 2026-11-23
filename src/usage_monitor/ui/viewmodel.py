@@ -201,6 +201,7 @@ def error_note(error: PollError, lang: Lang = Lang.ZH_TW) -> str:
         ErrReason.REJECTED: "note_rejected",
         ErrReason.UNSUPPORTED: "note_unsupported",
         ErrReason.FREE_PLAN: "note_unsupported",
+        ErrReason.NOT_RUNNING: "note_not_running",
     }.get(_reason(error), "note_offline")  # type: ignore[arg-type]
     return t(lang, key)
 
@@ -214,16 +215,23 @@ def error_detail(error: PollError, name: str, lang: Lang = Lang.ZH_TW) -> str:
     return t(lang, f"error_{reason.value}", name=name, status=status)
 
 
+QUIET_REASONS = frozenset({ErrReason.FREE_PLAN, ErrReason.NOT_RUNNING})
+"""沒有用量資料但不是錯誤：Claude Free 方案、Antigravity 沒開。照實說明，不紅、不通知。"""
+
+
 def is_free_plan(state: ProviderState | None) -> bool:
-    """Claude Free 方案沒有用量資料：照實說明，但不算要處理的錯誤（不紅、不通知）。"""
     return (
         state is not None and state.error is not None and state.error.reason is ErrReason.FREE_PLAN
     )
 
 
+def is_quiet(state: ProviderState | None) -> bool:
+    return state is not None and state.error is not None and state.error.reason in QUIET_REASONS
+
+
 def needs_action(state: ProviderState) -> bool:
-    """需要使用者處理（紅色）：認證錯誤，或從來沒成功過的錯誤。Free 方案不算。"""
-    if state.error is None or is_free_plan(state):
+    """需要使用者處理（紅色）：認證錯誤，或從來沒成功過的錯誤。QUIET_REASONS 不算。"""
+    if state.error is None or is_quiet(state):
         return False
     return state.error.kind is ErrKind.AUTH or state.usage is None
 
@@ -235,6 +243,13 @@ def _windows(usage: Usage | None) -> tuple[Window, Window]:
     if usage is None:
         return Window(label=DEFAULT_LABELS[0]), Window(label=DEFAULT_LABELS[1])
     return usage.session, usage.long
+
+
+def group_rows(usage: Usage | None) -> tuple[Window, Window] | None:
+    """沒有短週期、但剛好有兩個分組時（Antigravity 免費／Plus 方案），小工具一列畫一個分組。"""
+    if usage is None or usage.session.available or len(usage.scoped) != 2:
+        return None
+    return usage.scoped[0], usage.scoped[1]
 
 
 def _label(w: Window, index: int) -> str:
@@ -269,7 +284,10 @@ def _hover(
         title = f"{title} · {state.usage.plan}"
     lines: list[HoverLineVM] = []
     if state.usage is not None:
-        periods = [(long_label(_label(w, i), lang), w) for i, w in enumerate(_windows(state.usage))]
+        periods: list[tuple[str, Window]] = []
+        if group_rows(state.usage) is None:
+            windows = enumerate(_windows(state.usage))
+            periods = [(long_label(_label(w, i), lang), w) for i, w in windows]
         periods += [(w.label or EMPTY, w) for w in state.usage.scoped]
         for period, w in periods:
             if not w.available:
@@ -333,12 +351,13 @@ def build_column(
             hover,
         )  # fmt: skip
 
-    windows = _windows(state.usage)
+    windows = group_rows(state.usage) or _windows(state.usage)
     badge = plan_badge(state.usage.plan) if state.usage else None
-    if is_free_plan(state):
+    if is_quiet(state):
         note = error_note(state.error, lang)  # type: ignore[arg-type]
+        badge = "FREE" if is_free_plan(state) else badge
         return ColumnVM(
-            pid, title, note, NoteKind.MUTED, rows(windows, RowStyle.EMPTY), hover, "FREE"
+            pid, title, note, NoteKind.MUTED, rows(windows, RowStyle.EMPTY), hover, badge
         )
     if needs_action(state):
         assert state.error is not None
@@ -485,6 +504,8 @@ def build_tray_vm(
         column = build_column(p, state, now, tz, lang)
         lines.append(_tooltip_line(column, state, lang))
         scoped = state.usage.scoped if state and state.usage else ()
+        if state is not None and group_rows(state.usage) is not None:
+            scoped = ()  # 分組已經是小工具的兩列
         extra = tuple(f"{w.label} {window_text(w, now, tz, lang)}" for w in scoped)
         full.append(_tooltip_line(column, state, lang, extra))
     if len("\n".join(full)) <= TOOLTIP_MAX:
@@ -584,7 +605,7 @@ def service_status(
         return ServiceStatusVM(t(lang, "status_disabled"), StatusKind.MUTED)
     if state is None:
         return ServiceStatusVM(t(lang, "loading"), StatusKind.MUTED)
-    if is_free_plan(state):
+    if is_quiet(state):
         assert state.error is not None
         return ServiceStatusVM(error_detail(state.error, name, lang), StatusKind.MUTED)
     if needs_action(state):
@@ -624,7 +645,7 @@ class AuthNotifier:
         for pid, name in providers:
             state = states.get(pid)
             error = state.error if state else None
-            if error is None or error.kind is not ErrKind.AUTH or is_free_plan(state):
+            if error is None or error.kind is not ErrKind.AUTH or is_quiet(state):
                 self._notified.discard(pid)
                 continue
             if pid in self._notified:

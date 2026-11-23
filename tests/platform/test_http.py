@@ -114,3 +114,18 @@ def test_get_without_progress_does_not_stream() -> None:
     session = StubSession(_response(200))
     RequestsTransport(session).get("https://github.com/a", {}, timeout=30)
     assert session.kwargs["stream"] is False
+
+
+def test_antigravity_csrf_only_to_loopback_without_proxy() -> None:
+    session = StubSession(_response(200))
+    transport = RequestsTransport(session)
+    transport.post("http://127.0.0.1:5/x", {"X-Codeium-Csrf-Token": "t"}, {}, 30)
+    assert session.kwargs["proxies"] == {"http": None, "https": None}
+    with pytest.raises(ValueError, match=r"Antigravity"):
+        transport.post("https://evil.example/x", {"x-codeium-csrf-token": "t"}, {}, 30)
+    with pytest.raises(ValueError, match="https"):
+        transport.get("http://localhost:5/x", {}, timeout=30)
+    with pytest.raises(ValueError, match="127"):
+        transport.get("http://127.0.0.1:5/x", {"Authorization": "Bearer x"}, timeout=30)
+    transport.get("https://api.anthropic.com/x", {}, timeout=30)
+    assert session.kwargs["proxies"] is None

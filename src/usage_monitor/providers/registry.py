@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from usage_monitor.core.interfaces import Clock, Provider, Transport
+from usage_monitor.providers.antigravity import provider as antigravity
 from usage_monitor.providers.claude import provider as claude
 from usage_monitor.providers.codex import provider as codex
 
@@ -13,6 +14,7 @@ ProviderFactory = Callable[[Transport, Clock], Provider]
 FACTORIES: dict[str, ProviderFactory] = {
     claude.PROVIDER_ID: claude.create,
     codex.PROVIDER_ID: codex.create,
+    antigravity.PROVIDER_ID: antigravity.create,
 }
 
 

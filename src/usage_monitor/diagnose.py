@@ -326,8 +326,11 @@ def check_api(report: Report, provider: Provider, clock: Clock) -> bool:
         message = _error_text(e, provider.display_name, report.lang)
         report.fail(report.t("diag_api_failed", kind=e.kind.name, status=status, message=message))
         report.info(report.t("diag_source", source=_source(provider, report.lang)))
-        free = e.reason is ErrReason.FREE_PLAN
-        report.problem(report.t("diag_hint_free_plan" if free else _HINTS[e.kind]))
+        quiet = {
+            ErrReason.FREE_PLAN: "diag_hint_free_plan",
+            ErrReason.NOT_RUNNING: "diag_hint_not_running",
+        }
+        report.problem(report.t(quiet.get(e.reason, _HINTS[e.kind])))  # type: ignore[arg-type]
         return False
     now = clock.now()
     report.ok(report.t("diag_api_ok", source=_source(provider, report.lang)))
@@ -373,6 +376,8 @@ def run(
 
 REDACTED = "<redacted>"
 _SENSITIVE_KEY = re.compile(r"id$|_id|uuid|email|user|account|org|name|token|secret|key", re.I)
+# Antigravity 配額分組與桶的名稱（"Gemini Models"、"gemini-weekly"）：不是帳號資料，留著才看得懂
+_SAFE_KEYS = frozenset({"displayName", "bucketId"})
 _SENSITIVE_VALUE = re.compile(
     r"@|^sk-|^eyJ|^Bearer\s|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-|^[A-Za-z0-9_\-]{32,}$", re.I
 )
@@ -387,7 +392,11 @@ def anonymize(value: object) -> object:
         result: dict[str, object] = {}
         for k, v in value.items():  # pyright: ignore[reportUnknownVariableType]
             key = str(k)  # pyright: ignore[reportUnknownArgumentType]
-            sensitive = isinstance(v, str) and _SENSITIVE_KEY.search(key) is not None
+            sensitive = (
+                isinstance(v, str)
+                and key not in _SAFE_KEYS
+                and _SENSITIVE_KEY.search(key) is not None
+            )
             result[key] = REDACTED if sensitive else anonymize(v)
         return result
     if isinstance(value, list):

@@ -65,7 +65,7 @@ DARK = Palette(
     error_text="#f08b7d",
     error_mark="#f05a46",
     drag_border="#7fb3ff",
-    provider_titles={"claude": "#e08a5f", "codex": "#ffffff"},
+    provider_titles={"claude": "#e08a5f", "codex": "#ffffff", "antigravity": "#5b9cff"},
 )
 
 LIGHT = Palette(
@@ -88,7 +88,7 @@ LIGHT = Palette(
     error_mark="#e0483a",
     drag_border="#3b82f6",
     # 淺色底上白字看不到：Codex 改用最深的文字色，Claude 用深一點的橘色
-    provider_titles={"claude": "#c25a2c", "codex": "#1f1f1f"},
+    provider_titles={"claude": "#c25a2c", "codex": "#1f1f1f", "antigravity": "#1a5fd0"},
 )
 
 

@@ -2,9 +2,9 @@
 
 **English** | [繁體中文](README.zh-TW.md)
 
-A small always-on-top widget that sits just above the Windows taskbar and shows your **Claude** (Pro/Max subscription) and **Codex** (ChatGPT account) usage percentages and reset countdowns. It supports the Claude Desktop app.
+A small always-on-top widget that sits just above the Windows taskbar and shows your **Claude** (Pro/Max subscription), **Codex** (ChatGPT account) and **Antigravity** usage percentages and reset countdowns. It supports the Claude Desktop app.
 
-> This is an unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners.
+> This is an unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, Codex and Antigravity are trademarks of their respective owners.
 
 ```
 ┃ Claude                          │ Codex
@@ -16,6 +16,7 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
 
 - Your plan (Pro, Max 5x, Plus, Free…) next to each service name
 - Claude shows usage only for paid plans (Pro/Max): with a Free account the Claude column shows "Unsupported"
+- Antigravity (off by default; turn it on under "AI services to monitor"): shown while Antigravity is running. On the free / Google AI Plus quota, which has only weekly limits, the two rows are the model groups: `Gem` (Gemini) and `C/G` (Claude and GPT)
 - Green below 70%, yellow 70–89%, red 90% and above; hover over the widget to see the exact reset time and per-model weekly limits such as Fable
 - Dashboard "Usage" page: 5-hour usage over the past 7 days, the peak of each weekly (or monthly) period, and your recent average
 - Tray icon (check it when the widget is hidden), auto-hide in full screen, `Ctrl+Alt+U` to show/hide
@@ -54,11 +55,12 @@ If the update fails (for example the folder isn't writable), the old version kee
 | --- | --- | --- |
 | Claude | ① Claude Code CLI: `%USERPROFILE%\.claude\.credentials.json` (only if not expired)<br>② Claude Desktop: `%LOCALAPPDATA%\Claude-Data\claude_*`, `%APPDATA%\Claude\`, the old Store path | `api.anthropic.com/api/oauth/usage` |
 | Codex | `%USERPROFILE%\.codex\auth.json` (or `%CODEX_HOME%`) | `chatgpt.com/backend-api/wham/usage` |
+| Antigravity | `%USERPROFILE%\.gemini\antigravity\daemon\hub_*.json` (written by the running Antigravity; no Google sign-in is used) | Antigravity's own language server on `127.0.0.1` |
 
 Privacy and security:
 
 - These files are only **read**, never modified, and the refresh token is never used (so the official apps never get signed out)
-- Tokens are sent only to `api.anthropic.com` and `chatgpt.com`, and never written to logs, settings or anywhere else
+- Tokens are sent only to `api.anthropic.com` and `chatgpt.com` (Antigravity's local token only to `127.0.0.1` on your computer), and never written to logs, settings or anywhere else
 - Usage history (`%APPDATA%\MyUsageMonitor\history.db`) keeps only the percentages and times from each refresh, for 90 days, on your computer; Settings → Advanced → "Clear usage history" deletes it
 - Usage is checked every 5 minutes by default. These usage APIs are undocumented, so a format change may temporarily stop the numbers from showing
 
@@ -96,6 +98,7 @@ Run diagnostics first: Settings → Advanced → "Run diagnostics" (also offered
 | "Expired" | Open Claude Desktop so it refreshes the sign-in; if you only use the CLI, turn on "Allow CLI token refresh" |
 | Diagnostics says "DPAPI couldn't decrypt the key" | The app isn't running as the user signed in to Windows (for example, run as administrator); start it with a normal double-click |
 | Numbers are dimmed and "12 min ago" appears next to the service name | The network or server is temporarily unavailable; you're seeing the last numbers and they update once it recovers. On a corporate network, make sure `api.anthropic.com` is reachable |
+| "Not running" next to Antigravity | Antigravity isn't open; the numbers appear within a minute after you open it |
 | Codex 5h shows 0% | Your plan only has a long window (for example 30 days), with no 5-hour window |
 | The shortcut does nothing and Settings shows red text | Another app has taken it; pick a different one in Settings |
 | The widget is gone | Left-click the tray icon or press `Ctrl+Alt+U`; if it ended up off screen, tray right-click → "Reset position" |
@@ -135,4 +138,4 @@ To try a local build first: `scripts\build.ps1` produces `dist\ClaudeUsageTracke
 
 Released under the [MIT](LICENSE) license. The licenses of the third-party components bundled in the exe (PySide6/Qt under LGPL-3.0, plus requests, cryptography, truststore and others) are listed in `THIRD_PARTY_LICENSES.txt` attached to every Release.
 
-This is an unofficial tool, not affiliated with Anthropic or OpenAI. Claude, ChatGPT and Codex are trademarks of their respective owners.
+This is an unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, Codex and Antigravity are trademarks of their respective owners.

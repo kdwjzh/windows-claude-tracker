@@ -316,9 +316,11 @@ def test_broken_settings_file_starts_with_defaults(qapp, tmp_path: Path) -> None
 def test_about_page_shows_license_and_disclaimer(setup) -> None:
     controller, store, _ = setup
     dialog = dialog_of(controller)
-    assert "與 Anthropic、OpenAI 無關" in dialog.disclaimer.text()
+    assert "與 Anthropic、OpenAI、Google 無關" in dialog.disclaimer.text()
     store.update(lambda s: replace(s, language="en"))
-    assert "not affiliated with Anthropic or OpenAI" in dialog_of(controller).disclaimer.text()
+    assert (
+        "not affiliated with Anthropic, OpenAI or Google" in dialog_of(controller).disclaimer.text()
+    )
 
 
 def test_menus_open_dashboard(setup) -> None:

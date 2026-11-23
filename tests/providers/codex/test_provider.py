@@ -140,6 +140,6 @@ def test_signature_and_identity(tmp_path: Path) -> None:
 
 
 def test_registered_with_one_line() -> None:
-    assert registry.available() == ["claude", "codex"]
+    assert registry.available() == ["claude", "codex", "antigravity"]
     assert isinstance(create(FakeTransport(), FakeClock(NOW)), CodexProvider)
     assert registry.create("codex", FakeTransport(), FakeClock(NOW)).id == "codex"

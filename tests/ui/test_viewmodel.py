@@ -691,3 +691,53 @@ def test_free_plan_after_paid_notifies_again_later() -> None:
     assert notifier.update([CLAUDE], {"claude": FREE_STATE}) == []
     rejected = ProviderState("claude", None, PollError(ErrKind.AUTH, "x", status=401), False, None)
     assert len(notifier.update([CLAUDE], {"claude": rejected})) == 1
+
+
+# ---------------------------------------------------------------- Antigravity（2026-11-23）
+
+AG = ("antigravity", "Antigravity")
+AG_WEEKLY = Usage(
+    Window(label="5h"),
+    win(11, 6 * D, "7d"),
+    NOW - 2 * M,
+    scoped=(win(11, 6 * D, "Gem"), win(0, 6 * D + 30 * M, "C/G")),
+    plan="Plus",
+)
+
+
+def test_weekly_only_groups_are_the_widget_rows() -> None:
+    """沒有 5h、剛好兩個分組：小工具一列一組；懸停卡只列分組；提示文字不重複。"""
+    (column,) = vm({"antigravity": ok("antigravity", AG_WEEKLY, "antigravity")}, [AG]).columns
+    assert (column.badge, column.note) == ("PLUS", None)
+    assert column.rows == (
+        RowVM("Gem", 1.1, Level.OK, "11% · 6天0時", RowStyle.NORMAL),
+        RowVM("C/G", 0, Level.OK, "0% · 6天0時", RowStyle.NORMAL),
+    )
+    assert [line.label for line in column.hover.lines] == ["Gem", "C/G"]
+    assert column.hover.title == "Antigravity · Plus"
+    tray = build_tray_vm([AG], {"antigravity": ok("antigravity", AG_WEEKLY)}, NOW, TPE)
+    assert tray.tooltip == "Antigravity Gem 11% · 6天0時 | C/G 0% · 6天0時"
+    assert tray.bars == (None, TrayBar(11, Level.OK))  # 系統匣仍畫 5h／7d
+
+
+def test_groups_with_session_window_keep_5h_7d_rows() -> None:
+    paid = replace(
+        AG_WEEKLY,
+        session=win(31, 2 * H, "5h"),
+        scoped=(win(31, 2 * H, "Gem 5h"), win(11, 6 * D, "Gem 7d")),
+    )
+    (column,) = vm({"antigravity": ok("antigravity", paid)}, [AG]).columns
+    assert [row.label for row in column.rows] == ["5h", "7d"]
+    assert [line.label for line in column.hover.lines] == ["5 小時", "7 天", "Gem 5h", "Gem 7d"]
+
+
+def test_antigravity_not_running_is_quiet() -> None:
+    error = PollError(ErrKind.AUTH, "Antigravity 沒有在執行", reason=ErrReason.NOT_RUNNING)
+    state = ProviderState("antigravity", None, error, False, None)
+    (column,) = vm({"antigravity": state}, [AG]).columns
+    assert (column.note, column.note_kind, column.badge) == ("未開啟", NoteKind.MUTED, None)
+    assert {row.style for row in column.rows} == {RowStyle.EMPTY}
+    assert column.hover.error == "Antigravity 沒有開啟：開啟後會自動顯示用量"
+    assert build_tray_vm([AG], {"antigravity": state}, NOW, TPE).dot is None
+    assert AuthNotifier().update([AG], {"antigravity": state}) == []
+    assert service_status(True, state, NOW, name="Antigravity").kind is StatusKind.MUTED

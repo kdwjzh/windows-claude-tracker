@@ -4,6 +4,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+
+- **Antigravity** as a third service to monitor (off by default; turn it on under "AI services to monitor"). The app reads the quota from the language server that Antigravity runs on your own computer (`127.0.0.1`), found through the `hub_*.json` file Antigravity writes in `%USERPROFILE%\.gemini\antigravity\daemon\`; it never uses your Google sign-in. Its column is blue. With the free / Google AI Plus quota, which has only weekly limits per model group, the two rows show the groups: 「Gem」 (Gemini) and 「C/G」 (Claude and GPT). Plans with a 5-hour limit show 5h / 7d as usual (the highest group), and the hover card lists every group. The plan badge (「PLUS」, 「PRO」, 「ULTRA」) comes from the same local server. When Antigravity isn't open, the column says 「未開啟」 / "Not running" without a notification and picks up again once you open it (ADR 0009)
+
+### Changed
+
+- `ErrReason` has a new `NOT_RUNNING` value, treated like `FREE_PLAN`: shown muted, no notification, no tray dot
+- `RequestsTransport` now allows plain http to `127.0.0.1` only, sends Antigravity's local token (`X-Codeium-Csrf-Token`) nowhere else, and never sends loopback requests through a proxy
+- The disclaimer (About page and READMEs) now also names Google and Antigravity
+- `diagnose --dump-response` keeps `displayName` and `bucketId` values (quota group names, not account data)
+
 ### Fixed
 
 - With a Claude Free account (for example in Claude Desktop), the widget showed "Sign-in rejected (HTTP 403)", a red dot and a sign-in notification, as if the sign-in were broken. Claude shows usage only for paid plans, so the usage API refuses Free accounts. The app now checks the plan on a 403 and, for Free, shows a 「FREE」 badge and a muted 「不支援」 / "Unsupported" with empty bars, explains it in the hover card, dashboard and diagnostics, and doesn't notify or add a tray dot. It checks again once a day (or when you sign in again), so upgrading to a paid plan starts tracking by itself

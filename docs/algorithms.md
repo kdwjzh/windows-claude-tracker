@@ -1,6 +1,6 @@
 # Algorithm reference
 
-How the app gets tokens, decrypts Claude Desktop data, calls the usage APIs and classifies errors. This document matches the current code; when the code changes, update it too. File locations and layer rules are in `CLAUDE.md` §4.
+How the app gets tokens, decrypts Claude Desktop data, calls the usage APIs (including Antigravity's local language server) and classifies errors. This document matches the current code; when the code changes, update it too. File locations and layer rules are in `CLAUDE.md` §4.
 
 None of these APIs are documented, and their formats can change at any time: parse leniently, and when a new format shows up, save it under `tests/fixtures/` and add a test.
 
@@ -168,6 +168,7 @@ On failure, `provider.poll()` raises only `PollError(kind, message, reason=…, 
 | Token expired | `AUTH` | `EXPIRED` | Same as above |
 | HTTP 401/403 | `AUTH` | `REJECTED` | Same as above |
 | Claude HTTP 403 on a Free account (§4.2) | `AUTH` | `FREE_PLAN` | Same as above, and also retried after 24 hours (`retry_after`); no notification |
+| Antigravity not running (§7) | `AUTH` | `NOT_RUNNING` | Same as above (the signature is the hub files); no notification |
 | HTTP 429 | `TRANSIENT` | `RATE_LIMITED` | Exponential backoff |
 | HTTP 5xx | `TRANSIENT` | `SERVER` | Exponential backoff |
 | Connection timeout | `TRANSIENT` | `TIMEOUT` | Exponential backoff |
@@ -181,3 +182,45 @@ On failure, `provider.poll()` raises only `PollError(kind, message, reason=…, 
 - **Error isolation**: each service has its own schedule and backoff; any exception in one service affects only its own `ProviderState`
 - On failure, the last successful data is kept and marked `stale`
 - Every network request runs on a background thread with a 30-second timeout
+
+## 7. Antigravity (local language server)
+
+Code: `providers/antigravity/`, ADR 0009
+
+**Finding the server**: `%USERPROFILE%\.gemini\antigravity\daemon\hub_<port>.json`, written by Antigravity at start:
+
+```json
+{"pid": 5000, "httpsPort": 56766, "httpPort": 56767, "lsVersion": "2.34.0", "csrfToken": "<uuid>"}
+```
+
+- Files whose `pid` is no longer running are skipped (a crash leaves the file behind); of the rest, the newest by mtime wins
+- No usable file → `AUTH` / `NOT_RUNNING`
+- Credential signature: name + size + mtime of every `hub_*.json` (resumes polling when Antigravity starts)
+
+**Calls** (Connect-RPC, JSON body `{}`, 30-second timeout):
+
+```http
+POST http://127.0.0.1:<httpPort>/exa.language_server_pb.LanguageServerService/RetrieveUserQuotaSummary
+Content-Type: application/json
+X-Codeium-Csrf-Token: <csrfToken>
+```
+
+- `platform/http.py` allows plain http only to `127.0.0.1`, refuses `X-Codeium-Csrf-Token` to any other host, and bypasses proxies for loopback requests
+- 401/403 → `AUTH` / `REJECTED`; 5xx → `TRANSIENT` / `SERVER`; other non-2xx → `TRANSIENT` / `BAD_RESPONSE`
+
+**Quota summary**: `response.groups[]` (`displayName` such as "Gemini Models", "Claude and GPT models"), each with `buckets[]`:
+
+| Field | Meaning |
+| --- | --- |
+| `bucketId` | `gemini-weekly`, `3p-5h`, `argon-weekly`, … |
+| `window` | `5h` or `weekly`; other values are ignored |
+| `remainingFraction` | **Remaining** 0–1; used % = (1 − value) × 100. Omitted when 0 (proto3): with a future `resetTime` that means fully used |
+| `resetTime` | ISO 8601 UTC |
+
+- Short name per group: Gemini → `Gem`, Claude/GPT (or a `3p-` bucket) → `C/G`, otherwise the first word of `displayName`; `argon-*` / `carbon-*` buckets use `Argon` / `Carbon`
+- `Usage.session` / `Usage.long`: the highest `5h` / `weekly` bucket across groups, labeled `5h` / `7d`
+- `Usage.scoped`: every bucket, labeled with the short name (weekly only) or short name + period (`Gem 5h`) when any `5h` bucket exists
+- No usable bucket at all → `TRANSIENT` / `BAD_RESPONSE`
+- Measured 2026-11-23 (Google AI Plus, "Antigravity Starter Quota"): weekly buckets only; `tests/fixtures/antigravity/quota_summary_weekly.json`. The 5h shape (`quota_summary_5h.json`) is hand-written from other clients' code, not measured
+
+**Plan**: `GetUserStatus` (same headers) → `userStatus.userTier.id` `g1-<plan>-tier` → "Plus", "Pro", "Ultra Lite". Only that field is read: the response also has the email and name. `planStatus.planInfo.planName` is a leftover (a Plus account says "Pro") and isn't used. A failed plan call only leaves the badge out
