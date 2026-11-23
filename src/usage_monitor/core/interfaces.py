@@ -48,7 +48,7 @@ class Response:
 
 class Provider(Protocol):
     id: str
-    """"claude"、"codex"。"""
+    """"claude"、"codex"、"antigravity"。"""
     display_name: str
     """小工具上顯示的名稱。"""
 
@@ -67,7 +67,7 @@ class Provider(Protocol):
 
 class CredentialSource(Protocol):
     name: str
-    """來源代碼 "cli"、"desktop"、"codex_cli"。"""
+    """來源代碼 "cli"、"desktop"、"codex_cli"、"antigravity"。"""
 
     def read(self) -> Token | None:
         """讀取 token；任何失敗都回傳 None，不丟例外。"""

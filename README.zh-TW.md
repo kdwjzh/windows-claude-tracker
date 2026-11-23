@@ -71,10 +71,10 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 | 欄位 | 預設 | 說明 |
 | --- | --- | --- |
 | `interval_minutes` | `5` | 更新間隔（分鐘），1–1440 |
-| `providers` | `["claude"]` | 要顯示的服務：`"claude"`、`"codex"` |
+| `providers` | `["claude"]` | 要顯示的服務：`"claude"`、`"codex"`、`"antigravity"` |
 | `allow_cli_refresh` | `false` | Claude Code CLI 的 token 過期、且沒有其他可用登入時，執行 `claude -p . --no-session-persistence` 讓 CLI 自己更新（會用掉少量額度，最多 30 分鐘一次，需 Claude Code ≥ 2.0.63） |
 | `language` | `"system"` | `"system"`（跟隨 Windows）、`"zh-TW"`、`"en"` |
-| `tray_icon` | `"auto"` | 系統匣圖示畫哪個監控對象：`"auto"`（最近用量有增加的；剛開程式時，先畫同時有 5h 與 7d 額度中用量最高的）、`"claude"` 或 `"codex"`；選的監控對象沒啟用時畫第一個啟用的 |
+| `tray_icon` | `"auto"` | 系統匣圖示畫哪個監控對象：`"auto"`（最近用量有增加的；剛開程式時，先畫同時有 5h 與 7d 額度中用量最高的）、`"claude"`、`"codex"` 或 `"antigravity"`；選的監控對象沒啟用時畫第一個啟用的 |
 | `widget.visible` | `true` | 顯示小工具 |
 | `widget.locked` | `false` | 鎖定位置（不能拖曳） |
 | `widget.opacity` | `0.9` | 背景不透明度，0.3–1.0 |

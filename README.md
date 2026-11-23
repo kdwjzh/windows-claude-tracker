@@ -71,10 +71,10 @@ Location: `%APPDATA%\MyUsageMonitor\settings.json`. Prefer the Settings window (
 | Field | Default | Description |
 | --- | --- | --- |
 | `interval_minutes` | `5` | Refresh interval in minutes, 1–1440 |
-| `providers` | `["claude"]` | Services to show: `"claude"`, `"codex"` |
+| `providers` | `["claude"]` | Services to show: `"claude"`, `"codex"`, `"antigravity"` |
 | `allow_cli_refresh` | `false` | When the Claude Code CLI token has expired and no other sign-in works, run `claude -p . --no-session-persistence` so the CLI refreshes itself (uses a little quota, at most once every 30 minutes, needs Claude Code ≥ 2.0.63) |
 | `language` | `"system"` | `"system"` (follow Windows), `"zh-TW"`, `"en"` |
-| `tray_icon` | `"auto"` | Which service the tray icon draws: `"auto"` (the one whose usage went up most recently; right after start, the highest usage among those with both 5h and 7d limits), `"claude"` or `"codex"`; a service that's turned off falls back to the first enabled one |
+| `tray_icon` | `"auto"` | Which service the tray icon draws: `"auto"` (the one whose usage went up most recently; right after start, the highest usage among those with both 5h and 7d limits), `"claude"`, `"codex"` or `"antigravity"`; a service that's turned off falls back to the first enabled one |
 | `widget.visible` | `true` | Show the widget |
 | `widget.locked` | `false` | Lock the position (no dragging) |
 | `widget.opacity` | `0.9` | Background opacity, 0.3–1.0 |

@@ -62,6 +62,7 @@ On an auth error the scheduler pauses that service, compares the signature every
 | --- | --- |
 | Claude CLI, Codex | Path + file size + mtime |
 | Claude Desktop | SHA-256 of the `oauth:tokenCache*` ciphertext in each candidate folder |
+| Antigravity | Name + size + mtime of every `hub_*.json` in the daemon folder (§7) |
 
 **Don't use the mtime of the desktop `config.json`**: the desktop app rewrites it often, for example to save the window position.
 

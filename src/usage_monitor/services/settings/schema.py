@@ -62,7 +62,7 @@ class Settings:
     language: str = "system"
     """"system"（跟隨 Windows 顯示語言）、"zh-TW"、"en"（CLAUDE.md §3.8）。"""
     tray_icon: str = "auto"
-    """系統匣圖示畫哪個監控對象："auto"（最近有在用的）或代碼（"claude"、"codex"）。
+    """系統匣圖示畫哪個監控對象："auto"（最近有在用的）或代碼（"claude"、"codex"、"antigravity"）。
 
     選的監控對象沒啟用時畫第一個啟用的；新欄位用預設值即可，不需要遷移。
     """

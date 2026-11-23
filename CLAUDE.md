@@ -24,7 +24,7 @@ The Microsoft Store version of Claude Desktop moved its data to `%LOCALAPPDATA%\
 - No theme engine (internationalization was added to scope on 2026-10-30, see §3.8)
 - No automatic background download: the update check only **checks and reminds**; the new version is downloaded only when the user presses "Update now" in About (§3.9, ADR 0007, revised 2026-11-05). No installer: the app stays a single portable exe
 - No other services such as Cursor, Grok, Copilot or OpenCode (but the architecture must allow adding one without changing existing code, see §4.3)
-- No multiple accounts (one Claude account + one Codex account)
+- No multiple accounts (one Claude account + one Codex account + one Antigravity account)
 - No reading `~/.claude/.credentials.json` inside WSL; no extra usage (`spend`) (decided 2026-10-31); per-model weekly limits (`weekly_scoped`, for example Fable) are shown in the hover card and tray tooltip only, never as widget rows (revised 2026-11-13, ADR 0008)
 
 ---
@@ -141,6 +141,7 @@ Read the response headers `anthropic-ratelimit-unified-{5h,7d}-utilization` (**0
 | Token expired | Auth | Same as above |
 | HTTP 401/403 | Auth | Same as above |
 | HTTP 403 on a Claude Free account (`FREE_PLAN`) | Auth, not an error to fix | Paused like auth, but also retried after 24 hours (`retry_after`); no notification, no red |
+| Antigravity not running (`NOT_RUNNING`, §3.10) | Auth, not an error to fix | Paused like auth until the hub files change; no notification, no red |
 | HTTP 429, 5xx | Transient | Exponential backoff `30s × 2^(n-1)`, capped at the poll interval; with `Retry-After`, use the larger value |
 | Connection failure, timeout | Transient | Same as above |
 | Other 4xx | Unsupported | Claude falls back to the Messages API |
@@ -156,7 +157,7 @@ Other rules:
 - **Sleep and resume** (added 2026-11-04): on `WM_POWERBROADCAST` / `PBT_APMRESUMEAUTOMATIC` (`platform/power.py`) the UI redraws and polls immediately; as a fallback that doesn't depend on Windows messages (Modern Standby may not send one), the polling thread never waits longer than 60 seconds before comparing wall-clock time with each service's next due time
 - Only one poll runs at a time; manual refresh wakes the loop with a `threading.Event`
 
-**Credential signatures**: the CLI file uses "path + size + mtime"; the desktop app uses the SHA-256 of the `oauth:tokenCache*` ciphertext. **Don't use the mtime of the desktop `config.json`**: the desktop app rewrites it often, for example to save the window position.
+**Credential signatures**: the CLI file uses "path + size + mtime"; the desktop app uses the SHA-256 of the `oauth:tokenCache*` ciphertext; Antigravity uses name + size + mtime of every `hub_*.json`. **Don't use the mtime of the desktop `config.json`**: the desktop app rewrites it often, for example to save the window position.
 
 ### 3.6 Data model (`core/models.py`)
 
@@ -240,7 +241,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 **Interactions (artboard 3)**
 
 - After hovering 0.5 seconds, a detail card appears above the widget: service name, data source, each period's percentage and 「今天 20:20 重置（2時13分後）」/ "Resets today 20:20 (in 2h 13m)", last update time, and 「雙擊立即更新」/ "Double-click to refresh". Per-model weekly limits (`Usage.scoped`, for example Fable) get one extra line each below the periods, labeled with the model name, with 「 · 最多用每週上限的 50%」/ " · up to 50% of the weekly limit" when the API reports a share (added 2026-11-13)
-- Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
+- Context menu: Refresh now (double-click) / — / Lock position / Opacity › (100%, 90%, 75%, 60%) / Reset position / — / Hide widget (Ctrl+Alt+U) / AI services to monitor › (Claude ✓, Codex ✓, Antigravity) / Open dashboard (opens the Settings window) / Open log / — / Quit
 - While dragging, show a blue outline `#7fb3ff`; on release within 12 px of a work-area edge, snap to it (8 px from the edge after snapping)
 - Show/hide: tray left-click, the shortcut (`Ctrl+Alt+U` by default, changeable in Settings), or the context menu. Auto-hide in full screen: a maximized window **with a title bar** isn't full screen (even when its rectangle covers the screen, for example with an auto-hiding taskbar), while a window **without a title bar** that covers the whole screen is, maximized or not — such as a video in full screen in a maximized browser (`platform/fullscreen.is_fullscreen_window`, revised 2026-11-04); a manual hide is never undone by leaving full screen
 
@@ -251,7 +252,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
   - **Red dot** = needs action (not signed in, expired, rejected)
   - **Gray dot** = stale data (temporarily unreachable)
 - Tooltip: one line per service, for example `Claude 5h 42% · 2時13分 | 7d 18% · 4天3時 | Fable 94% · 1時00分`, **at most 127 characters** in total; per-model limits are appended only when the whole tooltip still fits, otherwise all of them are left out (the hover card always has them). The tray icon still draws only the short and long periods
-- Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / AI services to monitor › (Claude ✓, Codex ✓) / Open dashboard (opens the Settings window) / Open log / — / Quit
+- Tray context menu: Show widget ✓ / Refresh now / — / Lock position / Reset position / — / Start with Windows ✓ / AI services to monitor › (Claude ✓, Codex ✓, Antigravity) / Open dashboard (opens the Settings window) / Open log / — / Quit
   - When a new version exists, the **top** of the menu gets an extra 「有新版本 v1.2.0 →」/ "New version v1.2.0 →" item + separator, which opens Settings → About (revised 2026-11-05, ADR 0007); the tray icon gets a blue dot `#7fb3ff` at the bottom right (a different spot from the red and gray dots, so they can appear together)
 - Windows notifications appear only when action is needed, once per error type; buttons "Run diagnostics" and "Close". A temporary network outage never notifies
 - **Diagnostics window** (added 2026-11-04, not in the designs; `ui/diagnose_window.py`): opened by Settings → Advanced → "Run diagnostics" and by clicking a sign-in error notification. Shows the full `diagnose` report (monospace, scrollable, selectable, read only) with "Copy" and "Run again" buttons; the report runs on a background thread and comes back through a Qt signal, showing 「診斷中…」/ "Running diagnostics…" with the buttons disabled meanwhile; an exception shows a one-line error (details in the log) and never crashes the app; closing only hides it. `ui` can't import `diagnose` (same layer), so `bootstrap.py` injects `diagnose.report_text` into the `Controller`
@@ -261,7 +262,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Windows 11 style, navigation on the left: Usage / General / Advanced / About (opens on Usage)
 - Usage (added 2026-11-04, not in the designs): one card per enabled service with the current numbers and reset times (same text as the hover card), a line chart of the short (5h) window over the past 7 days (the line breaks where two records are more than 2 hours apart; hidden when the service reports no short window and has no records), a bar chart of each long period's peak percentage (records grouped by `resets_at` rounded to the hour, last 8 periods, the running one labeled 「本期」/ "Now", bar colors from `core/levels.py`) and 「最近 N 個週期平均用到 X%」/ "Last N periods averaged X%" over the last 4 finished periods (shown only with at least 2); drawn with `QPainter`, never `QtCharts`; data from `history.db`, re-read when the dashboard refreshes
 - Font: **bold** everywhere; Traditional Chinese uses Microsoft JhengHei (微軟正黑體), English keeps the widget's font list (`theme.FONT_FAMILIES`) (decided 2026-11-02)
-- General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude and Codex switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": 「自動（最近使用的）」/ "Auto (most recently used)" / Claude / Codex)
+- General: Updates (refresh interval, start with Windows), Widget (show, lock position, opacity slider, hide in full screen, show/hide shortcut, theme), AI services to monitor (「AI 監控對象」; Claude, Codex and Antigravity switches + connection status and source — the same on/off as the context-menu submenu — and 「系統匣圖示顯示」/ "Tray icon shows": 「自動（最近使用的）」/ "Auto (most recently used)" / Claude / Codex / Antigravity)
 - Advanced: allow CLI token refresh (off by default), open log folder, run diagnostics, clear usage history (asks for confirmation first)
 - About (not in the designs; follow this description): GitHub icon + current version `v1.2.0` + "Check for updates" button (refresh icon); below it a status line: "You're up to date" / "Version v1.3.0 is available" (with "Update now" — packaged exe only, when the release has the exe and `SHA256SUMS.txt` — and "Download", which opens the Release page) / "Downloading v1.3.0… 45%" (percent shown when the server reports the size) / "Starting v1.3.0…" / "Update failed. Use Download to update by hand" / "Can't check right now"; a "Check for updates automatically" switch (on by default); "Skip this version"; project page, license (MIT); and a disclaimer line at the bottom ("Unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, Codex and Antigravity are trademarks of their respective owners." and the Chinese equivalent)
 - Changes apply immediately; there is no "Save" button
@@ -281,7 +282,7 @@ The UI text examples below are in Traditional Chinese because the designs are; e
 - Translation tables live in `core/i18n.py`: one `{key: text}` dict per language, looked up with `t(lang, key, **params)`; tests guarantee both languages have exactly the same keys and `{params}`
 - Time formats by language: Chinese 「2時13分」「4天3時」「滿 · 20:15 重置」; English "2h 13m", "4d 3h", "Full · resets 20:15"
 - Errors: `PollError` carries a `reason` (`ErrReason`, for example no token, expired, HTTP 401), and the UI shows text for that reason in the current language; `message` stays in Chinese and is for logs only
-- Sources: `source_label` is a code (`desktop`, `cli`, `codex_cli`) that the UI translates (「桌面版」/ "Desktop app", and so on)
+- Sources: `source_label` is a code (`desktop`, `cli`, `codex_cli`, `antigravity`) that the UI translates (「桌面版」/ "Desktop app", and so on)
 - `diagnose` output (added 2026-11-04): uses the same tables (`diag_*` keys). Language: `--lang zh-TW|en` (terminal use; the app's diagnostics window always uses the current UI language) > `language` in `settings.json` (read only, never rewritten) > the Windows display language (`platform/ui_language.py`, no Qt). In Chinese an API error prints `PollError.message` as before; in English it prints the text for its `reason`
 - Not translated: logs (including `diagnose --debug`), code comments
 
@@ -476,7 +477,7 @@ bootstrap.py: the only place allowed to import every layer
 
 - Arrows only point right and down: **a lower layer never knows an upper layer exists**
 - `core` imports no other package of this project, and never `PySide6`, `requests`, `ctypes` or `winreg`
-- `providers` and `services` never import `PySide6`; `providers.claude` and `providers.codex` never import each other
+- `providers` and `services` never import `PySide6`; the service packages (`providers.claude`, `providers.codex`, `providers.antigravity`) never import each other
 - `ui` never imports `providers` or `platform.http`: the UI gets data only through ViewModels
 - These rules are import-linter contracts in `pyproject.toml`; **breaking one fails the checks**
 
@@ -494,7 +495,7 @@ The effect:
 
 ```python
 class Provider(Protocol):
-    id: str  # "claude", "codex"
+    id: str  # "claude", "codex", "antigravity"
     display_name: str  # name shown on the widget
 
     def poll(self) -> Usage: ...  # raises PollError on failure
@@ -546,7 +547,7 @@ Scheduler (background thread)
 ### 5.1 Security
 
 1. **Tokens never touch disk**: not in logs, files, caches, exception messages or tooltips. The masking filter covers `sk-ant-…`, `Bearer …` and JWTs (`eyJ…`). `diagnose` prints only masked tokens (first 14 + last 4 characters). `tests/fixtures/` must never contain real tokens.
-2. **Read only**: never modify any Claude or Codex file.
+2. **Read only**: never modify any Claude, Codex or Antigravity file.
    The usage history (`history.db`) stores only service ids, percentages and times: never tokens, account ids or anything else.
 3. **Never use the refresh token**.
 4. Tokens are sent only to `api.anthropic.com` and `chatgpt.com`; Antigravity's csrf token only to `127.0.0.1`, never through a proxy (`platform/http.py` enforces both). Of the Claude profile API (§3.3) only the two plan fields are read; account details in it are never logged or stored. The update check connects only to `api.github.com`; "Update now" downloads only this repo's release assets from `github.com` and the `*.githubusercontent.com` hosts it redirects to (redirects followed by hand, each hop checked); neither sends any token, account or usage data.
@@ -579,7 +580,7 @@ Scheduler (background thread)
 Rules:
 
 - **For every bug, first write a failing test that reproduces it, then fix it**; that test stays forever
-- When an API response shows a new shape, save it (anonymized) as a new fixture and add a test: `python -m usage_monitor.diagnose --dump-response claude|codex` calls the usage API once and writes the anonymized JSON (IDs, emails, names and token-like strings → `<redacted>`) to `usage_<service>_<time>.json` in the current folder; look it over before committing. Parsers log unknown non-null fields at debug level (`docs/algorithms.md` §4, §5); `tests/test_diagnose.py` checks every fixture is already anonymized
+- When an API response shows a new shape, save it (anonymized) as a new fixture and add a test: `python -m usage_monitor.diagnose --dump-response claude|codex|antigravity` calls the usage API once and writes the anonymized JSON (IDs, emails, names and token-like strings → `<redacted>`) to `usage_<service>_<time>.json` in the current folder; look it over before committing. Parsers log unknown non-null fields at debug level (`docs/algorithms.md` §4, §5); `tests/test_diagnose.py` checks every fixture is already anonymized
 - Coverage threshold: `core` + `providers` + `services` combined ≥ 90%; CI fails below it
 
 ### 5.4 Tools and checks

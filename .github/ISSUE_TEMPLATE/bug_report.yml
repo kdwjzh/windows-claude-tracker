@@ -29,7 +29,7 @@ body:
         - Microsoft Store
         - Regular installer (claude.ai/download)
         - Not installed (Claude Code CLI only)
-        - Not using Claude (Codex only)
+        - Not using Claude (Codex / Antigravity only)
         - Not sure
     validations:
       required: true

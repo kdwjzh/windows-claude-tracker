@@ -132,4 +132,8 @@ forbidden_modules = ["usage_monitor.providers", "usage_monitor.platform.http", "
 [[tool.importlinter.contracts]]
 name = "各服務互不依賴"
 type = "independence"
-modules = ["usage_monitor.providers.claude", "usage_monitor.providers.codex"]
+modules = [
+    "usage_monitor.providers.claude",
+    "usage_monitor.providers.codex",
+    "usage_monitor.providers.antigravity",
+]

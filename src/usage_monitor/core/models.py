@@ -50,4 +50,4 @@ class ProviderState:
     stale: bool
     """usage 是舊的（最後一次輪詢失敗）。"""
     source_label: str | None
-    """來源代碼 "desktop"／"cli"／"codex_cli"，畫面依語言翻譯；不含 token。"""
+    """來源代碼 "desktop"／"cli"／"codex_cli"／"antigravity"，畫面依語言翻譯；不含 token。"""
