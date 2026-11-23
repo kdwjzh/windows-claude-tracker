@@ -7,12 +7,12 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
 > This is an unofficial tool, not affiliated with Anthropic, OpenAI or Google. Claude, ChatGPT, Codex and Antigravity are trademarks of their respective owners.
 
 ```
-┃ Claude                          │ Codex
+┃ Claude [PRO]                    │ Codex [PLUS]
 ┃ 5h  ■■■■□□□□□□  42% · 2h 13m    │ 5h  □□□□□□□□□□  0%
-┃ 7d  ■■□□□□□□□□  18% · 4d 3h     │ 30d ■■■□□□□□□□  32% · 29d
+┃ 7d  ■□□□□□□□□□  18% · 4d 3h     │ 30d ■■■□□□□□□□  32% · 29d
 ```
 
-<img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="550">
+<img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="379">
 
 - Your plan (Pro, Max 5x, Plus, Free…) next to each service name
 - Claude shows usage only for paid plans (Pro/Max): with a Free account the Claude column shows "Unsupported"

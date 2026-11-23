@@ -7,12 +7,12 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 > 本專案為非官方工具，與 Anthropic、OpenAI、Google 無關；Claude、ChatGPT、Codex、Antigravity 為其各自擁有者的商標。
 
 ```
-┃ Claude                          │ Codex
+┃ Claude [PRO]                    │ Codex [PLUS]
 ┃ 5h  ■■■■□□□□□□  42% · 2時13分   │ 5h  □□□□□□□□□□  0%
-┃ 7d  ■■□□□□□□□□  18% · 4天3時    │ 30d ■■■□□□□□□□  32% · 29天
+┃ 7d  ■□□□□□□□□□  18% · 4天3時    │ 30d ■■■□□□□□□□  32% · 29天
 ```
 
-<img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="550">
+<img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="386">
 
 - 每個服務名稱旁邊顯示你的方案（Pro、Max 5x、Plus、Free…）
 - Claude 只提供付費方案（Pro／Max）的用量：Free 帳號的 Claude 欄會顯示「不支援」
