@@ -8,11 +8,11 @@ Windows 工作列上方的浮動小工具，顯示 **Claude**（Pro／Max 訂閱
 
 ```
 ┃ Claude [PRO]                    │ Codex [PLUS]
-┃ 5h  ■■■■□□□□□□  42% · 2時13分   │ 5h  □□□□□□□□□□  0%
-┃ 7d  ■□□□□□□□□□  18% · 4天3時    │ 30d ■■■□□□□□□□  32% · 29天
+┃ 5h  ■■■■□□□□□□  42% · 2時13分   │ 5h  ■□□□□□□□□□  12% · 3時40分
+┃ 7d  ■□□□□□□□□□  18% · 4天3時    │ 7d  ■■□□□□□□□□  26% · 5天2時
 ```
 
-<img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="386">
+<img src="docs/images/widget-zh-TW.png" alt="Claude Usage Tracker 小工具" width="550">
 
 - 每個服務名稱旁邊顯示你的方案（Pro、Max 5x、Plus、Free…）
 - Claude 只提供付費方案（Pro／Max）的用量：Free 帳號的 Claude 欄會顯示「不支援」

@@ -8,11 +8,11 @@ A small always-on-top widget that sits just above the Windows taskbar and shows 
 
 ```
 ┃ Claude [PRO]                    │ Codex [PLUS]
-┃ 5h  ■■■■□□□□□□  42% · 2h 13m    │ 5h  □□□□□□□□□□  0%
-┃ 7d  ■□□□□□□□□□  18% · 4d 3h     │ 30d ■■■□□□□□□□  32% · 29d
+┃ 5h  ■■■■□□□□□□  42% · 2h 13m    │ 5h  ■□□□□□□□□□  12% · 3h 40m
+┃ 7d  ■□□□□□□□□□  18% · 4d 3h     │ 7d  ■■□□□□□□□□  26% · 5d 2h
 ```
 
-<img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="379">
+<img src="docs/images/widget-en.png" alt="Claude Usage Tracker widget" width="550">
 
 - Your plan (Pro, Max 5x, Plus, Free…) next to each service name
 - Claude shows usage only for paid plans (Pro/Max): with a Free account the Claude column shows "Unsupported"
