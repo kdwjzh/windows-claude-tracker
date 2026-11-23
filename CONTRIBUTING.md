@@ -28,7 +28,7 @@ Only one copy of the app runs at a time: quit any installed version first (tray 
   ```
 
   This runs ruff (lint and format), pyright, import-linter and pytest with a 90% coverage threshold.
-- **Keep the layers apart**: `core` → `providers` / `platform` → `services` → `ui`, and a lower layer never imports a higher one. import-linter enforces this. A new service goes in its own `providers/<name>/` folder plus one line in `providers/registry.py`.
+- **Keep the layers apart**: `core` → `providers` / `platform` → `services` → `ui`, and a lower layer never imports a higher one. import-linter enforces this. A new service goes in its own `providers/<name>/` folder plus one line in `providers/registry.py`, and must be added to the independence contract ("各服務互不依賴") in `pyproject.toml` so services can't import each other. Ask the maintainer which title color it should use.
 - **Bug fixes start with a failing test** that reproduces the bug; the test stays.
 - **Never commit tokens**, personal paths or account details, including in test fixtures. The pre-commit hook runs gitleaks.
 - A new API response shape? `python -m usage_monitor.diagnose --dump-response claude` (or `codex`, `antigravity`) saves an anonymized copy you can add under `tests/fixtures/`; still read it before committing.

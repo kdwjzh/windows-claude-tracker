@@ -489,7 +489,7 @@ The effect:
 | The Anthropic API response format changes | `providers/claude/parse.py` + fixture | Everything else |
 | The color threshold moves from 70 to 75 | `core/levels.py` | Everything else (widget and tray change together) |
 | Widget look tweaks | `ui/theme.py`, `ui/widget/painter.py` | Data fetching, scheduling |
-| Add a service (for example Cursor) | Add `providers/cursor/` + one registration line in `registry.py` | Existing services and UI code |
+| Add a service (for example Cursor) | Add `providers/cursor/` + one registration line in `registry.py` + add it to the "各服務互不依賴" independence contract in `pyproject.toml` (missed for Antigravity until a docs review, 2026-11-23) + ask the maintainer for its title color (§3.7) | Existing services and UI code |
 
 ### 4.3 Extension points (interfaces in `core/interfaces.py`)
 
